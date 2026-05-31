@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+
+# Whisper / ML models
+*.bin
+*.gguf
+*.ggml
+
+# Archives
+*.zip
+*.rar
+*.7z
+
+# Large media
+*.mp4
+*.wav
+*.mp3
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# .NET
+*.nupkg
+project.lock.json
+
+# Antigravity CLI
+.antigravitycli
+
+# Agent Files
+AGENTS.md
+CLAUDE.md
+GEMINI.md

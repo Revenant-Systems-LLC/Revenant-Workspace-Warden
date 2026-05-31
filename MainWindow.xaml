@@ -1,0 +1,139 @@
+<Window x:Class="RevenantHardening.Companion.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Revenant Workspace Warden" Height="500" Width="400"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual"
+        Loaded="Window_Loaded" Closed="Window_Closed"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
+
+    <Border BorderBrush="#d4af37" BorderThickness="1" CornerRadius="4" Background="#E6001500" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="10" ShadowDepth="5" Opacity="0.8"/>
+        </Border.Effect>
+
+        <Grid>
+            <!-- Circuit background -->
+            <Image Source="Assets/Circuits.png" Stretch="UniformToFill" Opacity="0.3" Margin="0" />
+
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Border Grid.Row="0" BorderBrush="#d4af37" BorderThickness="0,0,0,1" Padding="5">
+                    <Grid>
+                        <TextBlock Text="AI COMPANION (RWW)" Foreground="#ffb000" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="_" Width="25" Height="25" Background="Transparent" Foreground="#d4af37" BorderThickness="0" FontWeight="Bold" Click="MinimizeBtn_Click"/>
+                            <Button Content="□" Width="25" Height="25" Background="Transparent" Foreground="#d4af37" BorderThickness="0" FontWeight="Bold" Click="MaximizeBtn_Click"/>
+                            <Button Content="X" Width="25" Height="25" Background="Transparent" Foreground="#d4af37" BorderThickness="0" FontWeight="Bold" Click="CloseBtn_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Settings Panel -->
+                <Expander Grid.Row="1" Header="Engine Settings" Foreground="#d4af37" Margin="0,5,0,0">
+                    <StackPanel Margin="10,5,10,5">
+                        <TextBlock Text="Local Model:" Foreground="#aaaaaa" Margin="0,0,0,2"/>
+                        <ComboBox Name="ModelSelector" Background="#333333" Foreground="Black" Margin="0,0,0,10"/>
+                        
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Temperature:" Foreground="#aaaaaa" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Name="TempSlider" Minimum="0.0" Maximum="1.0" Value="0.7" TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <TextBlock Text="Context Limit (Tokens):" Foreground="#aaaaaa" Margin="0,0,0,2"/>
+                        <TextBox Name="ContextBox" Text="32768" Background="#333333" Foreground="White" BorderBrush="#d4af37" Padding="2"/>
+
+                        <!-- Phase 1: Tutor Mode toggle (inside Settings to avoid crowding the input bar) -->
+                        <CheckBox Name="TutorModeCheck" Content="Tutor Mode (syllabus-aware + teaching)" 
+                                  Foreground="#d4af37" Margin="0,10,0,0"
+                                  Checked="TutorModeCheck_Checked" Unchecked="TutorModeCheck_Unchecked"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Chat History -->
+                <ScrollViewer Grid.Row="2" Margin="0,10,0,10" Name="ChatScroller" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl Name="ChatHistory">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="{Binding Margin}">
+                                    <Expander Header="Thinking..." 
+                                              Foreground="#888888" 
+                                              Visibility="{Binding HasThinkText, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              Margin="0,0,0,5">
+                                        <TextBlock Text="{Binding ThinkText}" Foreground="#aaaaaa" TextWrapping="Wrap" Margin="10,5,0,5"/>
+                                    </Expander>
+
+                                    <TextBlock Text="{Binding DisplayText}" 
+                                               Foreground="{Binding TextColor}" 
+                                               FontWeight="{Binding TextWeight}"
+                                               FontStyle="{Binding TextStyle}"
+                                               TextWrapping="Wrap" />
+
+                                    <!-- Phase 1: Structured tutor output sections (only populated for tutor responses) -->
+                                    <TextBlock Text="{Binding SyllabusArea}" 
+                                               Foreground="#ffb000" FontWeight="SemiBold" FontSize="11"
+                                               Margin="0,4,0,2" Visibility="{Binding SyllabusArea, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                    <Expander Header="Before / After" Foreground="#d4af37" Margin="0,4,0,2"
+                                              Visibility="{Binding BeforeCode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="Before:" Foreground="#ffaaaa" FontSize="10" Margin="0,2"/>
+                                            <TextBlock Text="{Binding BeforeCode}" FontFamily="Consolas" FontSize="10" 
+                                                       Foreground="#e0e0e0" TextWrapping="Wrap" Background="#1a1a1a" Padding="4"/>
+                                            <TextBlock Text="After:" Foreground="#aaffaa" FontSize="10" Margin="0,6,0,2"/>
+                                            <TextBlock Text="{Binding AfterCode}" FontFamily="Consolas" FontSize="10" 
+                                                       Foreground="#e0e0e0" TextWrapping="Wrap" Background="#1a1a1a" Padding="4"/>
+                                        </StackPanel>
+                                    </Expander>
+
+                                    <Expander Header="Teaching Notes" Foreground="#d4af37" Margin="0,2,0,4"
+                                              Visibility="{Binding TeachingNotes, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="{Binding TeachingNotes}" Foreground="#cccccc" TextWrapping="Wrap" 
+                                                   FontSize="11" Margin="4"/>
+                                    </Expander>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Loading Indicator -->
+                <StackPanel Grid.Row="3" Name="LoadingPanel" Orientation="Horizontal" HorizontalAlignment="Left" Margin="5,0,0,10" Visibility="Collapsed">
+                    <ProgressBar IsIndeterminate="True" Width="60" Height="4" Background="#333333" Foreground="#ffb000" BorderThickness="0" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Axiom is thinking..." Foreground="#ffb000" FontSize="12" FontStyle="Italic" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Input Area -->
+                <Grid Grid.Row="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0" Name="AttachBtn" Content="+" Width="30" Height="30" Background="#d4af37" Foreground="Black" FontWeight="Bold" Click="AttachBtn_Click" Margin="0,0,5,0" ToolTip="Attach File for Review"/>
+                    <Button Grid.Column="1" Name="MicBtn" Content="MIC" Width="35" Height="30" Background="#333333" Foreground="#d4af37" FontWeight="Bold" Click="MicBtn_Click" Margin="0,0,10,0" ToolTip="Toggle Note-Taking"/>
+                    <ToggleButton Grid.Column="2" Name="ProviderToggle" Content="LOCAL" Width="55" Height="30" Background="#333333" Foreground="#d4af37" FontWeight="Bold" Margin="0,0,10,0" ToolTip="Toggle LLM Provider" Checked="ProviderToggle_Checked" Unchecked="ProviderToggle_Unchecked"/>
+                    
+                    <TextBox Grid.Column="3" Name="InputBox" Background="#80000000" Foreground="#e0e0e0" BorderBrush="#d4af37" BorderThickness="1" Padding="5" VerticalContentAlignment="Center" KeyDown="InputBox_KeyDown"/>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

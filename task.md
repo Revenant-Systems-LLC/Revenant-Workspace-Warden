@@ -1,0 +1,6 @@
+- `[x]` Research and identify robustness improvements
+- `[x]` Create implementation plan
+- `[x]` Obtain user approval
+- `[x]` Update `MainWindow.xaml.cs` to add retries, path safety, safeguards, and timeouts
+- `[x]` Update `AudioTranscriber.cs` to apply safe paths and queue error handling
+- `[x]` Verify changes compile properly
