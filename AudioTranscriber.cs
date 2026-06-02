@@ -8,7 +8,7 @@ using NAudio.Wave;
 using Whisper.net;
 using Whisper.net.Ggml;
 
-namespace RevenantHardening.Companion;
+namespace RevenantWorkspaceWarden;
 
 public class AudioTranscriber : IDisposable
 {

@@ -3,7 +3,7 @@ using System.Data;
 using System.Windows;
 using System.Threading;
 
-namespace RevenantHardening.Companion;
+namespace RevenantWorkspaceWarden;
 
 /// <summary>
 /// Interaction logic for App.xaml
