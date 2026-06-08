@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\RWW_SAGEGOLD.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Resource Include="Assets\Street Reich.otf" />
+    <Resource Include="Assets\RWW_SAGEGOLD.ico" />
+    <Resource Include="Assets\RWW_RAGE.ico" />
   </ItemGroup>
 
   <ItemGroup>

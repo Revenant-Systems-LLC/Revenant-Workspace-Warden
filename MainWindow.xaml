@@ -1,9 +1,10 @@
 <Window x:Class="RevenantWorkspaceWarden.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Revenant Workspace Warden" Height="500" Width="420"
+        Title="Revenant Workspace Warden" Height="700" Width="420"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="True" WindowStartupLocation="Manual"
+        Icon="Assets/RWW_SAGEGOLD.ico"
         Loaded="Window_Loaded" Closed="Window_Closed"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
@@ -124,11 +125,10 @@
             <Grid Margin="10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>  <!-- Row 0: Header -->
-                    <RowDefinition Height="Auto"/>  <!-- Row 1: Settings -->
-                    <RowDefinition Height="*"/>     <!-- Row 2: Chat history -->
-                    <RowDefinition Height="Auto"/>  <!-- Row 3: Loading -->
-                    <RowDefinition Height="Auto"/>  <!-- Row 4: Input area -->
-                    <RowDefinition Height="Auto"/>  <!-- Row 5: Copyright -->
+                    <RowDefinition Height="*"/>     <!-- Row 1: Chat history and Settings -->
+                    <RowDefinition Height="Auto"/>  <!-- Row 2: Loading -->
+                    <RowDefinition Height="Auto"/>  <!-- Row 3: Input area -->
+                    <RowDefinition Height="Auto"/>  <!-- Row 4: Copyright -->
                 </Grid.RowDefinitions>
 
                 <!-- ── Header ──────────────────────────────────────────────── -->
@@ -166,15 +166,16 @@
                 </Border>
 
                 <!-- ── Engine Settings ─────────────────────────────────────── -->
-                <Expander Name="EngineSettingsExpander" Grid.Row="1" Header="Engine Settings" Foreground="#3ad5a1" Margin="0,5,0,0">
-                    <StackPanel Margin="10,5,10,5">
-                        <TextBlock Name="PrivacyWarning" Text="Local mode: code stays on this machine." Foreground="#dfbe81" FontStyle="Italic" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                <Expander Name="EngineSettingsExpander" Grid.Row="1" Header="Engine Settings" Foreground="#3ad5a1" Margin="0,5,0,0" VerticalAlignment="Top" Panel.ZIndex="5" Background="#111111" Expanded="EngineSettingsExpander_Expanded">
+                    <ScrollViewer MaxHeight="450" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10,5,10,5">
+                            <TextBlock Name="PrivacyWarning" Text="Local mode: code stays on this machine." Foreground="#dfbe81" FontStyle="Italic" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                        <TextBlock Text="Ollama Base URL:" Foreground="#888888" Margin="0,0,0,2"/>
-                        <TextBox Name="OllamaUrlBox" Text="http://localhost:11434"
-                                 Background="#0a0a0a" Foreground="White"
-                                 BorderBrush="#3ad5a1" Padding="2" Margin="0,0,0,10"
-                                 LostFocus="SettingsBox_LostFocus"/>
+                            <TextBlock Text="Ollama Base URL:" Foreground="#888888" Margin="0,0,0,2"/>
+                            <TextBox Name="OllamaUrlBox" Text="http://localhost:11434"
+                                     Background="#0a0a0a" Foreground="White"
+                                     BorderBrush="#3ad5a1" Padding="2" Margin="0,0,0,10"
+                                     LostFocus="SettingsBox_LostFocus"/>
 
                         <TextBlock Text="MegaLLM Base URL:" Foreground="#888888" Margin="0,0,0,2"/>
                         <TextBox Name="MegaLlmUrlBox" Text="https://ai.megallm.io"
@@ -237,11 +238,37 @@
                                   Checked="TutorModeCheck_Checked"
                                   Unchecked="TutorModeCheck_Unchecked"/>
                     </StackPanel>
+                    </ScrollViewer>
                 </Expander>
 
+                <!-- ── Spotlight Overlay ─────────────────────────────────────── -->
+                <Grid Name="SpotlightOverlay" Grid.RowSpan="5" Visibility="Collapsed" Panel.ZIndex="1000" IsHitTestVisible="True">
+                    <Path Fill="#D8000000">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Exclude">
+                                <CombinedGeometry.Geometry1>
+                                    <RectangleGeometry Rect="0,0,10000,10000" />
+                                </CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2>
+                                    <RectangleGeometry x:Name="SpotlightHole" Rect="0,0,0,0" RadiusX="4" RadiusY="4" />
+                                </CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                    
+                    <Border Name="TutorialPopup" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,0" Background="#111111" BorderBrush="#3ad5a1" BorderThickness="1" CornerRadius="4" Padding="15" MaxWidth="300">
+                        <StackPanel>
+                            <TextBlock Name="TutorialText" Text="Tutorial Step" Foreground="#e0e0e0" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Skip" Width="60" Height="25" Background="Transparent" Foreground="#888888" BorderThickness="0" Margin="0,0,10,0" Click="SkipTutorial_Click"/>
+                                <Button Content="Next" Width="70" Height="25" Background="#1e1e1e" Foreground="#dfbe81" BorderBrush="#dfbe81" Click="NextTutorial_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
                 <!-- ── Chat History ────────────────────────────────────────── -->
-                <ScrollViewer Grid.Row="2" Margin="0,10,0,6"
+                <ScrollViewer Grid.Row="1" Margin="0,30,0,6"
                               Name="ChatScroller" VerticalScrollBarVisibility="Auto">
                     <ItemsControl Name="ChatHistory">
                         <ItemsControl.ItemTemplate>
@@ -299,7 +326,7 @@
                 </ScrollViewer>
 
                 <!-- ── Loading Indicator ───────────────────────────────────── -->
-                <StackPanel Grid.Row="3" Name="LoadingPanel"
+                <StackPanel Grid.Row="2" Name="LoadingPanel"
                             Orientation="Horizontal" HorizontalAlignment="Left"
                             Margin="5,0,0,6" Visibility="Collapsed">
                     <ProgressBar IsIndeterminate="True" Width="60" Height="3"
@@ -311,7 +338,7 @@
                 </StackPanel>
 
                 <!-- ── Input Area ──────────────────────────────────────────── -->
-                <Grid Grid.Row="4">
+                <Grid Grid.Row="3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -326,8 +353,6 @@
                             Click="AttachBtn_Click" Margin="0,0,5,0"
                             ToolTip="Attach File for Review"/>
 
-                    <!-- Mic button removed since voice functionality was taken out -->
-
                     <!-- Text input: teal border -->
                     <TextBox Grid.Column="2" Name="InputBox"
                              Background="#80010806" Foreground="#e0e0e0"
@@ -337,7 +362,7 @@
                 </Grid>
 
                 <!-- ── Copyright ───────────────────────────────────────────── -->
-                <TextBlock Grid.Row="5"
+                <TextBlock Grid.Row="4"
                            Text="© Revenant Systems LLC"
                            Foreground="#1e5c3e"
                            FontSize="9"

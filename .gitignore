@@ -33,3 +33,12 @@ project.lock.json
 AGENTS.md
 CLAUDE.md
 GEMINI.md
+# REV-SYS GIT GUARDRAILS
+.env
+*.env
+Secrets.env
+/secrets/
+/keys/
+*.key
+*.pem
+config.local.*

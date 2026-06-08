@@ -118,6 +118,92 @@ namespace RevenantWorkspaceWarden
             await PopulateModelListAsync(config.SelectedModel);
         }
 
+        private int _tutorialStep = 0;
+
+        private void EngineSettingsExpander_Expanded(object sender, RoutedEventArgs e)
+        {
+            var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
+            if (!config.HasCompletedTutorial)
+            {
+                _tutorialStep = 0;
+                SpotlightOverlay.Visibility = Visibility.Visible;
+                Dispatcher.BeginInvoke(new Action(() => ShowTutorialStep()), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+        }
+
+        private void ShowTutorialStep()
+        {
+            switch (_tutorialStep)
+            {
+                case 0:
+                    HighlightControl(OllamaUrlBox);
+                    TutorialText.Text = "This is the Base URL for your local AI engine (like Ollama).";
+                    break;
+                case 1:
+                    HighlightControl(ProviderSelector);
+                    TutorialText.Text = "Select your LLM provider here. You can use local engines or cloud APIs.";
+                    break;
+                case 2:
+                    HighlightControl(ModelSelector);
+                    TutorialText.Text = "Choose the model you want to chat with. The list updates based on your provider.";
+                    break;
+                case 3:
+                    HighlightControl(ManageApiKeysBtn);
+                    TutorialText.Text = "If you use a cloud provider, add your API keys securely in the vault here.";
+                    break;
+                default:
+                    EndTutorial();
+                    break;
+            }
+        }
+
+        private async void HighlightControl(FrameworkElement target)
+        {
+            target.BringIntoView();
+            await Task.Delay(50); // allow layout to settle after scrolling
+            target.UpdateLayout();
+
+            try
+            {
+                GeneralTransform transform = target.TransformToVisual(SpotlightOverlay);
+                Point topLeft = transform.Transform(new Point(0, 0));
+                
+                double padding = 5;
+                SpotlightHole.Rect = new Rect(
+                    topLeft.X - padding,
+                    topLeft.Y - padding,
+                    target.ActualWidth + (padding * 2),
+                    target.ActualHeight + (padding * 2));
+
+                TutorialPopup.Margin = new Thickness(0, topLeft.Y + target.ActualHeight + padding + 15, 0, 0);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Fallback if not connected to visual tree
+                System.Diagnostics.Debug.WriteLine($"Highlight error: {ex.Message}");
+                SpotlightHole.Rect = new Rect(0, 0, 0, 0);
+            }
+        }
+
+        private void NextTutorial_Click(object sender, RoutedEventArgs e)
+        {
+            _tutorialStep++;
+            ShowTutorialStep();
+        }
+
+        private void SkipTutorial_Click(object sender, RoutedEventArgs e)
+        {
+            EndTutorial();
+        }
+
+        private void EndTutorial()
+        {
+            SpotlightOverlay.Visibility = Visibility.Collapsed;
+            var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
+            config.HasCompletedTutorial = true;
+            RevenantWorkspaceWarden.Providers.SecretsManager.SaveConfig(config);
+        }
+
         private async Task PopulateModelListAsync(string? targetModel = null)
         {
             Dispatcher.Invoke(() => ModelSelector.Items.Clear());
@@ -276,6 +362,21 @@ namespace RevenantWorkspaceWarden
                 LoadingPanel.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed);
         }
 
+        public void SetWardenState(bool isError)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (isError)
+                {
+                    this.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/RWW_RAGE.ico"));
+                }
+                else
+                {
+                    this.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/RWW_SAGEGOLD.ico"));
+                }
+            });
+        }
+
         public void ScrollToBottom() => Dispatcher.Invoke(() => ChatScroller.ScrollToEnd());
 
         public void DispatchToUiThread(Action action) => Dispatcher.Invoke(action);
@@ -296,8 +397,18 @@ namespace RevenantWorkspaceWarden
         public async Task<string?> DispatchLlmAsync(
             string prompt, bool forceTutor = false, string? lessonContext = null)
         {
-            string? aiResponse = await _ollamaService.SendToProviderAsync(prompt, lessonContext);
-            return aiResponse;
+            try
+            {
+                string? aiResponse = await _ollamaService.SendToProviderAsync(prompt, lessonContext);
+                SetWardenState(false); // Success -> Sage Gold
+                return aiResponse;
+            }
+            catch (Exception ex)
+            {
+                SetWardenState(true); // Error -> Rage Mode
+                AddSystemMessage($"[Warden Error]: {ex.Message}");
+                return null;
+            }
         }
 
         // =========================================================================
