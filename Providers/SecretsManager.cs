@@ -15,6 +15,7 @@ namespace RevenantWorkspaceWarden.Providers
         public string MegaLlmBaseUrl { get; set; } = "https://ai.megallm.io";
         public string SelectedProvider { get; set; } = "Ollama";
         public string SelectedModel { get; set; } = "revenant/axiom-14b";
+        public bool HasCompletedTutorial { get; set; } = false;
     }
 
     internal static class SecretsManager

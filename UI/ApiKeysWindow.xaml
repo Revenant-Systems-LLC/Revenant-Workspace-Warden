@@ -1,7 +1,7 @@
 <Window x:Class="RevenantWorkspaceWarden.UI.ApiKeysWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Manage API Keys" Height="360" Width="400"
+        Title="Manage API Keys" Height="550" Width="400"
         Background="#0a0a0a" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" WindowStyle="ToolWindow">
     
     <Window.Resources>
@@ -16,8 +16,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -25,17 +23,46 @@
         <TextBlock Grid.Row="0" Text="Secure Credential Vault" Foreground="#dfbe81" FontSize="16" FontWeight="Bold" Margin="0,0,0,5"/>
         <TextBlock Grid.Row="1" Text="Keys are encrypted natively using Windows DPAPI. They never touch plain text files." Foreground="#888888" TextWrapping="Wrap" Margin="0,0,0,15" FontSize="11" FontStyle="Italic"/>
 
-        <StackPanel Grid.Row="2" Margin="0,0,0,15">
-            <TextBlock Text="Gemini API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
-            <PasswordBox Name="GeminiKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
-        </StackPanel>
+        <ScrollViewer Grid.Row="2" Margin="0,0,0,15" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="Gemini API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="GeminiKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
 
-        <StackPanel Grid.Row="3" Margin="0,0,0,15">
-            <TextBlock Text="MegaLLM / Anthropic API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
-            <PasswordBox Name="MegaLlmKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
-        </StackPanel>
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="MegaLLM API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="MegaLlmKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
 
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="Anthropic API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="AnthropicKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="OpenAI API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="OpenAIKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="OpenRouter API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="OpenRouterKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="Groq API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="GroqKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,0,15">
+                    <TextBlock Text="xAI API Key:" Foreground="#3ad5a1" Margin="0,0,0,5"/>
+                    <PasswordBox Name="XaiKeyBox" Background="#1e1e1e" Foreground="White" BorderBrush="#3ad5a1" Padding="5"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="80" Height="30" Background="#1e1e1e" Foreground="#dfbe81" BorderBrush="#dfbe81" Margin="0,0,10,0" Click="CancelBtn_Click"/>
             <Button Content="Save &amp; Encrypt" Width="120" Height="30" Background="{StaticResource GoldGradient}" Foreground="#0a0a0a" FontWeight="Bold" Click="SaveBtn_Click"/>
         </StackPanel>

@@ -28,7 +28,12 @@ namespace RevenantWorkspaceWarden
         private ILLMProvider GetCurrentProvider()
         {
             if (_host.SelectedProvider == "Gemini") return new GeminiProvider(_host);
-            if (_host.SelectedProvider == "MegaLLM") return new MegaLLMProvider(_host, _host.MegaLlmBaseUrl);
+            if (_host.SelectedProvider == "Anthropic") return new AnthropicProvider(_host);
+            if (_host.SelectedProvider == "OpenAI") return new OpenAICompatibleProvider(_host, "OpenAI", "https://api.openai.com/v1", "OPENAI_API_KEY");
+            if (_host.SelectedProvider == "OpenRouter") return new OpenAICompatibleProvider(_host, "OpenRouter", "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY");
+            if (_host.SelectedProvider == "Groq") return new OpenAICompatibleProvider(_host, "Groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY");
+            if (_host.SelectedProvider == "xAI") return new OpenAICompatibleProvider(_host, "xAI", "https://api.x.ai/v1", "XAI_API_KEY");
+            if (_host.SelectedProvider == "MegaLLM") return new OpenAICompatibleProvider(_host, "MegaLLM", _host.MegaLlmBaseUrl, "MEGALLM_API_KEY");
             return new OllamaProvider(_host, _host.OllamaBaseUrl);
         }
 
