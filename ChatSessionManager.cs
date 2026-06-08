@@ -25,9 +25,9 @@ namespace RevenantWorkspaceWarden
         {
             try
             {
-                string appData    = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                string wardenDir  = Path.Combine(appData, "RevenantWorkspaceWarden");
-                string stagingDir = Path.Combine(wardenDir, "NotebookLM_Staging");
+                string docPath    = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string wardenDir  = Path.Combine(docPath, "RevenantWarden");
+                string stagingDir = Path.Combine(wardenDir, "ChatSessions");
                 Directory.CreateDirectory(stagingDir);
 
                 string filename = Path.Combine(stagingDir, $"chat_session_{DateTime.Now:yyyyMMdd_HHmmss}.md");
@@ -52,7 +52,7 @@ namespace RevenantWorkspaceWarden
                             break;
 
                         default: // MessageType.User
-                            sb.AppendLine($"**Dave:** {msg.DisplayText}\n");
+                            sb.AppendLine($"**{Environment.UserName}:** {msg.DisplayText}\n");
                             break;
                     }
                 }
@@ -63,58 +63,6 @@ namespace RevenantWorkspaceWarden
             catch (Exception ex)
             {
                 _host.AddSystemMessage($"Failed to save session: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Reads the lesson transcript, sends it to the LLM for summarization,
-        /// and saves the result to lesson_notes.md and NotebookLM_Staging.
-        /// </summary>
-        public async Task SummarizeNotesAsync()
-        {
-            string appData   = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string wardenDir = Path.Combine(appData, "RevenantWorkspaceWarden");
-            string path      = Path.Combine(wardenDir, "lesson_transcript.md");
-
-            if (!File.Exists(path))
-            {
-                _host.AddSystemMessage("No transcript found to summarize.");
-                return;
-            }
-
-            string content;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var sr = new StreamReader(fs))
-            {
-                content = await sr.ReadToEndAsync();
-            }
-
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                _host.AddSystemMessage("Transcript is empty.");
-                return;
-            }
-
-            _host.AddSystemMessage("Summarizing notes... (This might take a moment)");
-
-            string prompt =
-                "You are a highly intelligent tutor and assistant. Below is a raw, unedited speech-to-text " +
-                "transcript from a lesson. Extract the most important concepts, definitions, and takeaways, " +
-                "and organize them into a clean, easy-to-read bulleted list. Here is the transcript:\n\n" +
-                content;
-
-            string? answer = await _host.DispatchLlmAsync(prompt);
-
-            if (!string.IsNullOrWhiteSpace(answer))
-            {
-                string notesPath  = Path.Combine(wardenDir, "lesson_notes.md");
-                string stagingDir = Path.Combine(wardenDir, "NotebookLM_Staging");
-                Directory.CreateDirectory(stagingDir);
-
-                File.WriteAllText(notesPath, answer);
-                File.WriteAllText(Path.Combine(stagingDir, "lesson_notes.md"), answer);
-
-                _host.AddSystemMessage("Notes successfully saved locally and to NotebookLM_Staging!");
             }
         }
     }

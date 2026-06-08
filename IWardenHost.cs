@@ -5,11 +5,6 @@ using System.Threading.Tasks;
 namespace RevenantWorkspaceWarden
 {
     /// <summary>
-    /// Represents the mic button's current state.
-    /// </summary>
-    public enum MicState { Idle, Waiting, Recording }
-
-    /// <summary>
     /// Contract that MainWindow implements so services can update the UI
     /// and trigger LLM dispatch without taking a hard dependency on MainWindow itself.
     /// </summary>
@@ -35,7 +30,6 @@ namespace RevenantWorkspaceWarden
         // ── UI State ─────────────────────────────────────────────────────────────
         void SetLoadingState(bool isLoading);
         void ScrollToBottom();
-        void SetMicState(MicState state);
         void SetTutorModeChecked(bool isChecked);
 
         /// <summary>
@@ -57,7 +51,6 @@ namespace RevenantWorkspaceWarden
 
         /// <summary>
         /// The last text the user copied (Ctrl+Alt+C) or attached via the file picker.
-        /// Voice commands like "tutor this" act on this content.
         /// </summary>
         string? LastReviewableContent { get; set; }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,31 +124,37 @@ namespace RevenantWorkspaceWarden
         public string BuildFullTutorPrompt(string? additionalContext = null)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("You are a precise, patient, and encouraging tutor for the AAS in AI Engineering degree. You are strict but useful, direct, focused on actionable fixes, and able to explain mistakes clearly. Avoid vague praise. Avoid overexplaining obvious things. Support learning by doing.");
-            sb.AppendLine("The student is working through Python, data structures/algorithms, OOP, Flask (REST, auth, databases, async, microservices), React/TypeScript, prompt engineering & LLMs, ML foundations, and capstone full-stack AI projects.");
-            sb.AppendLine();
+            
+            string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string tutorDir = Path.Combine(docPath, "RevenantWarden", "TutorMaterials");
+            Directory.CreateDirectory(tutorDir);
+            
+            string defaultProfile = Path.Combine(tutorDir, "tutor_profile.md");
+            if (!File.Exists(defaultProfile))
+            {
+                File.WriteAllText(defaultProfile, @"You are a precise, patient, and encouraging software engineering tutor. You are strict but useful, direct, focused on actionable fixes, and able to explain mistakes clearly. Avoid vague praise. Avoid overexplaining obvious things. Support learning by doing.");
+            }
+
+            foreach (var file in Directory.GetFiles(tutorDir, "*.*"))
+            {
+                if (file.EndsWith(".md", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine($"### Context from {Path.GetFileName(file)}:");
+                    try { sb.AppendLine(File.ReadAllText(file)); } catch { }
+                    sb.AppendLine();
+                }
+            }
+
             sb.AppendLine("Analyze the following content and respond using these exact markdown sections (do not skip any):");
-            sb.AppendLine();
-            sb.AppendLine("## Summary");
-            sb.AppendLine("One paragraph summary of what the student is trying to do.");
-            sb.AppendLine();
-            sb.AppendLine("## Issues by Syllabus Area");
-            sb.AppendLine("- Map issues to specific courses where relevant (PY101-103, BE101-106, FE101-103, AI101-104).");
-            sb.AppendLine("- Include severity (High / Medium / Low) for each.");
-            sb.AppendLine();
-            sb.AppendLine("## Before / After (most important)");
-            sb.AppendLine("Show the most valuable concrete example with the problematic code and a clearer/safer version plus a short explanation.");
-            sb.AppendLine();
-            sb.AppendLine("## Teaching Point");
-            sb.AppendLine("The core principle being illustrated and why it matters at this stage of the program.");
-            sb.AppendLine();
-            sb.AppendLine("## Practice Follow-up");
-            sb.AppendLine("1-2 small, focused exercises or questions the student can do to internalize the concept.");
-            sb.AppendLine();
+            sb.AppendLine("## Summary\nOne paragraph summary of what the user is trying to do.\n");
+            sb.AppendLine("## Issues Identified\n- List any logical flaws or bugs.\n- Include severity (High / Medium / Low) for each.\n");
+            sb.AppendLine("## Before / After (most important)\nShow the most valuable concrete example with the problematic code and a clearer/safer version plus a short explanation.\n");
+            sb.AppendLine("## Teaching Point\nThe core principle being illustrated and why it matters.\n");
+            sb.AppendLine("## Practice Follow-up\n1-2 small, focused exercises or questions the user can do to internalize the concept.\n");
 
             if (!string.IsNullOrWhiteSpace(additionalContext))
             {
-                sb.AppendLine("### Recent lesson context (from student's notes):");
+                sb.AppendLine("### Additional Context:");
                 sb.AppendLine(additionalContext.Trim());
                 sb.AppendLine();
             }
@@ -187,10 +194,7 @@ namespace RevenantWorkspaceWarden
                 item.TeachingNotes = notes.ToString().Trim();
             }
 
-            if      (fullText.Contains("PY10", StringComparison.OrdinalIgnoreCase)) item.SyllabusArea = "Python / Data Structures / OOP";
-            else if (fullText.Contains("BE10", StringComparison.OrdinalIgnoreCase)) item.SyllabusArea = "Flask / Backend";
-            else if (fullText.Contains("FE10", StringComparison.OrdinalIgnoreCase)) item.SyllabusArea = "Frontend / React";
-            else if (fullText.Contains("AI10", StringComparison.OrdinalIgnoreCase)) item.SyllabusArea = "AI / LLMs / Prompt Engineering";
+            // Syllabus area extraction removed since the program is now generic.
         }
 
         // ── IDisposable ───────────────────────────────────────────────────────────

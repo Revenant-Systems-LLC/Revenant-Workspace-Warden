@@ -42,8 +42,6 @@ namespace RevenantWorkspaceWarden
         // ── Services ──────────────────────────────────────────────────────────────
         private OllamaService       _ollamaService      = null!;
         private OcrService          _ocrService         = null!;
-        private AudioService        _audioService       = null!;
-        private VoiceCommandHandler _voiceHandler       = null!;
         private ChatSessionManager  _chatSessionManager = null!;
 
         // ── IWardenHost State ─────────────────────────────────────────────────────
@@ -75,21 +73,9 @@ namespace RevenantWorkspaceWarden
             Left = workArea.Right  - Width  - 20;
             Top  = workArea.Bottom - Height - 20;
 
-            // Build services. VoiceCommandHandler uses lambdas that capture the
-            // fields below — field capture (not value capture) means they resolve
-            // at call-time, after all fields are assigned.
             _ollamaService      = new OllamaService(this);
             _ocrService         = new OcrService(this);
             _chatSessionManager = new ChatSessionManager(this);
-
-            _voiceHandler = new VoiceCommandHandler(
-                this,
-                toggleMicAsync:    () => _audioService.ToggleMicAsync(),
-                captureScreenAsync: () => _ocrService.CaptureActiveWindowForTutorAsync()
-            );
-
-            // AudioService owns the AudioTranscriber and wires the transcript callback
-            _audioService = new AudioService(this, _voiceHandler);
 
             AddSystemMessage("Revenant Workspace Warden initialized. Alt+Enter to hide.");
         }
@@ -164,7 +150,6 @@ namespace RevenantWorkspaceWarden
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            _audioService.Dispose();
             _source?.RemoveHook(HwndHook);
 
             NativeMethods.UnregisterHotKey(_windowHandle, HOTKEY_ID);
@@ -295,31 +280,6 @@ namespace RevenantWorkspaceWarden
 
         public void DispatchToUiThread(Action action) => Dispatcher.Invoke(action);
 
-        public void SetMicState(MicState state)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                switch (state)
-                {
-                    case MicState.Idle:
-                        MicBtn.Content    = "MIC";
-                        MicBtn.Background = (Brush)FindResource("GoldGradient");
-                        MicBtn.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0a0a0a"));
-                        break;
-                    case MicState.Waiting:
-                        MicBtn.Content    = "WAIT";
-                        MicBtn.Background = Brushes.DarkGoldenrod;
-                        MicBtn.Foreground = Brushes.White;
-                        break;
-                    case MicState.Recording:
-                        MicBtn.Content    = "REC";
-                        MicBtn.Background = Brushes.DarkRed;
-                        MicBtn.Foreground = Brushes.White;
-                        break;
-                }
-            });
-        }
-
         public void SetTutorModeChecked(bool isChecked)
         {
             Dispatcher.Invoke(() =>
@@ -409,7 +369,18 @@ namespace RevenantWorkspaceWarden
             => WindowState = WindowState.Minimized;
 
         private void MaximizeBtn_Click(object sender, RoutedEventArgs e)
-            => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                WindowState = WindowState.Normal;
+                if (sender is Button btn) btn.Content = "⛶";
+            }
+            else
+            {
+                WindowState = WindowState.Maximized;
+                if (sender is Button btn) btn.Content = "⧉";
+            }
+        }
 
         private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -417,9 +388,6 @@ namespace RevenantWorkspaceWarden
         {
             if (e.ChangedButton == MouseButton.Left) DragMove();
         }
-
-        private async void MicBtn_Click(object sender, RoutedEventArgs e)
-            => await _audioService.ToggleMicAsync();
 
         private async void AttachBtn_Click(object sender, RoutedEventArgs e)
         {
@@ -469,9 +437,7 @@ namespace RevenantWorkspaceWarden
             InputBox.Clear();
             AddUserMessage(text);
 
-            if      (lower == "/summarize")             await _chatSessionManager.SummarizeNotesAsync();
-            else if (lower == "/save")                  _chatSessionManager.SaveChatSession();
-            else if (lower.StartsWith("/tutornotes"))   await HandleTutorNotesCommandAsync();
+            if      (lower == "/save")                  _chatSessionManager.SaveChatSession();
             else if (lower.StartsWith("/tutor"))        await HandleTutorCommandAsync(trimmed.Length > 6 ? trimmed[6..].Trim() : "");
             else if (lower.StartsWith("/quick"))        await HandleQuickCommandAsync(trimmed.Length > 6 ? trimmed[6..].Trim() : "");
             else if (lower is "/screen" or "/capture" or "/look")
@@ -512,30 +478,6 @@ namespace RevenantWorkspaceWarden
                 await DispatchLlmAsync(content);
             }
             finally { IsTutorMode = previous; }
-        }
-
-        private async Task HandleTutorNotesCommandAsync()
-        {
-            string appData    = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string notesPath  = Path.Combine(appData, "RevenantWorkspaceWarden", "lesson_notes.md");
-
-            if (!File.Exists(notesPath))
-            {
-                AddSystemMessage("No lesson_notes.md found. Use the MIC button + /summarize first.");
-                return;
-            }
-
-            string notes;
-            using (var fs = new FileStream(notesPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var sr = new StreamReader(fs))
-                notes = await sr.ReadToEndAsync();
-
-            if (string.IsNullOrWhiteSpace(notes)) { AddSystemMessage("lesson_notes.md is empty."); return; }
-
-            AddSystemMessage("Tutoring from your latest lesson notes (structured mode)...");
-            await DispatchLlmAsync(
-                "Please tutor me on the key concepts in these lesson notes and give me practice examples.",
-                forceTutor: true, lessonContext: notes);
         }
 
         // =========================================================================

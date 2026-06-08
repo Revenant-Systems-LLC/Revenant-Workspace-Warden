@@ -15,14 +15,11 @@
     <None Update="Assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Resource Include="Assets\Street Reich.otf" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
-    <PackageReference Include="Whisper.net" Version="1.5.0" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.5.0" />
-    <PackageReference Include="Whisper.net.Runtime.Cublas" Version="1.5.0" />
   </ItemGroup>
 
 </Project>
