@@ -26,7 +26,7 @@ namespace RevenantWorkspaceWarden.Providers
         public async Task<List<string>> GetAvailableModelsAsync()
         {
             var modelList = new List<string>();
-            var secureApiKey = await SecretsManager.GetApiKeyAsync("ANTHROPIC_API_KEY", msg => _host.AddSystemMessage(msg));
+            var secureApiKey = await SecretsManager.GetApiKeyAsync("MEGALLM_API_KEY", msg => _host.AddSystemMessage(msg));
             if (secureApiKey == null || secureApiKey.Length == 0) return modelList;
 
             string? apiKey = SecretsManager.UnsecureKey(secureApiKey);
@@ -70,7 +70,7 @@ namespace RevenantWorkspaceWarden.Providers
 
         public async Task<string?> ChatAsync(string systemPrompt, string userPrompt, CancellationToken ct)
         {
-            var secureApiKey = await SecretsManager.GetApiKeyAsync("ANTHROPIC_API_KEY", msg => _host.AddSystemMessage(msg));
+            var secureApiKey = await SecretsManager.GetApiKeyAsync("MEGALLM_API_KEY", msg => _host.AddSystemMessage(msg));
             if (secureApiKey == null || secureApiKey.Length == 0) return null;
 
             _host.AddSystemMessage("Awaiting response from MegaLLM...");

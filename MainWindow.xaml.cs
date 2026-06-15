@@ -33,6 +33,7 @@ namespace RevenantWorkspaceWarden
         private const uint VK_F5                   = 0x74;
         private const uint VK_C                     = 0x43;
         private const uint VK_F2                    = 0x71;
+        private const uint VK_DIVIDE                = 0x6F;
 
         // ── Core Fields ───────────────────────────────────────────────────────────
         private IntPtr _windowHandle;
@@ -92,8 +93,8 @@ namespace RevenantWorkspaceWarden
 
             if (!NativeMethods.RegisterHotKey(_windowHandle, HOTKEY_ID, 0, VK_F5))
                 AddSystemMessage("⚠ F5 hotkey already in use — toggle visibility unavailable.");
-            if (!NativeMethods.RegisterHotKey(_windowHandle, CLIPBOARD_HOTKEY_ID, MOD_ALT | MOD_CONTROL, VK_C))
-                AddSystemMessage("⚠ Ctrl+Alt+C hotkey already in use — clipboard review unavailable.");
+            if (!NativeMethods.RegisterHotKey(_windowHandle, CLIPBOARD_HOTKEY_ID, 0, VK_DIVIDE))
+                AddSystemMessage("⚠ Numpad Divide hotkey already in use — clipboard review unavailable.");
             if (!NativeMethods.RegisterHotKey(_windowHandle, SCREEN_CAPTURE_HOTKEY_ID, 0, VK_F2))
                 AddSystemMessage("⚠ F2 hotkey already in use — screen capture unavailable.");
 
@@ -540,7 +541,13 @@ namespace RevenantWorkspaceWarden
 
         private async void InputBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Enter || string.IsNullOrWhiteSpace(InputBox.Text)) return;
+            if (e.Key != Key.Enter) return;
+
+            if (Keyboard.Modifiers == ModifierKeys.Shift) return;
+
+            e.Handled = true;
+
+            if (string.IsNullOrWhiteSpace(InputBox.Text)) return;
 
             string text   = InputBox.Text;
             string trimmed = text.Trim();

@@ -353,11 +353,11 @@
                             Click="AttachBtn_Click" Margin="0,0,5,0"
                             ToolTip="Attach File for Review"/>
 
-                    <!-- Text input: teal border -->
                     <TextBox Grid.Column="2" Name="InputBox"
                              Background="#80010806" Foreground="#e0e0e0"
                              BorderBrush="#3ad5a1" BorderThickness="1"
                              Padding="5" VerticalContentAlignment="Center"
+                             AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                              KeyDown="InputBox_KeyDown"/>
                 </Grid>
 
