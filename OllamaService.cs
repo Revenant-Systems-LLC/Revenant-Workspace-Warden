@@ -10,10 +10,6 @@ using RevenantWorkspaceWarden.Providers;
 
 namespace RevenantWorkspaceWarden
 {
-    /// <summary>
-    /// Handles all LLM communication (Ollama, MegaLLM, Gemini) using the ILLMProvider abstraction.
-    /// Also owns the tutor prompt builder and response enrichment logic.
-    /// </summary>
     internal sealed class OllamaService : IDisposable
     {
         private readonly IWardenHost _host;
@@ -51,10 +47,20 @@ namespace RevenantWorkspaceWarden
                         FileName = "ollama",
                         Arguments = "serve",
                         UseShellExecute = false,
-                        CreateNoWindow = true
+                        CreateNoWindow = true,
+                        RedirectStandardError = true,
                     };
                     _ollamaProcess = Process.Start(startInfo);
                     _host.AddSystemMessage("Ollama server started in background.");
+                    if (_ollamaProcess != null)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            string stderr = await _ollamaProcess.StandardError.ReadToEndAsync();
+                            if (!string.IsNullOrWhiteSpace(stderr))
+                                _host.AddSystemMessage($"⚠ Ollama: {stderr.Trim()}");
+                        });
+                    }
                 }
                 else
                 {
@@ -110,15 +116,14 @@ namespace RevenantWorkspaceWarden
 
             var text = await provider.ChatAsync(systemPrompt, prompt, ct);
 
-            // Enrichment is currently coupled to the tutor response format
             if (_host.IsTutorMode && !string.IsNullOrWhiteSpace(text))
             {
-                // We need to fetch the last UI message item to enrich it
-                var lastMsg = _host.Messages[_host.Messages.Count - 1];
-                if (lastMsg != null)
+                _host.DispatchToUiThread(() =>
                 {
-                    EnrichTutorResponse(text, lastMsg);
-                }
+                    var lastMsg = _host.Messages.Count > 0 ? _host.Messages[_host.Messages.Count - 1] : null;
+                    if (lastMsg != null)
+                        EnrichTutorResponse(text, lastMsg);
+                });
             }
 
             return text;
@@ -176,7 +181,7 @@ namespace RevenantWorkspaceWarden
             item.IsTutorResponse = true;
 
             var beforeAfterMatch = Regex.Match(fullText,
-                @"## Before / After.*?\n```(?:\w+)?\s*(?<before>[\s\S]*?)```\s*```(?:\w+)?\s*(?<after>[\s\S]*?)```",
+                @"## Before / After.*?\n```(?:\w+)?\s*(?<before>[\s\S]*?)```\s*```(?:\w+)?\s*(?<after>[\s\S]*?)""",
                 RegexOptions.IgnoreCase | RegexOptions.Singleline);
             if (beforeAfterMatch.Success)
             {
@@ -208,6 +213,9 @@ namespace RevenantWorkspaceWarden
         {
             if (_disposed) return;
             _disposed = true;
+            KillOllamaProcess();
+            _ollamaProcess?.Dispose();
+            _ollamaProcess = null;
         }
     }
 }

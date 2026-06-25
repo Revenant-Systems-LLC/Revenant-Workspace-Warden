@@ -457,6 +457,13 @@ namespace RevenantWorkspaceWarden
 
                 if (success && !string.IsNullOrEmpty(text))
                 {
+                    const int maxClipboardChars = 50_000;
+                    if (text.Length > maxClipboardChars)
+                    {
+                        if (Visibility != Visibility.Visible) ToggleVisibility();
+                        AddSystemMessage($"⚠ Clipboard content too large ({text.Length:N0} chars) — truncated to {maxClipboardChars:N0} for review.");
+                        text = text[..maxClipboardChars];
+                    }
                     LastReviewableContent = text;
                     if (Visibility != Visibility.Visible) ToggleVisibility();
 
@@ -616,15 +623,12 @@ namespace RevenantWorkspaceWarden
 
         private void SaveCurrentConfig()
         {
-            if (OllamaUrlBox == null || MegaLlmUrlBox == null || ModelSelector == null) return; // Not fully initialized yet
-
-            var config = new RevenantWorkspaceWarden.Providers.AppConfig
-            {
-                OllamaBaseUrl = OllamaUrlBox.Text,
-                MegaLlmBaseUrl = MegaLlmUrlBox.Text,
-                SelectedProvider = SelectedProvider,
-                SelectedModel = ModelSelector.SelectedItem?.ToString() ?? ""
-            };
+            if (OllamaUrlBox == null || MegaLlmUrlBox == null || ModelSelector == null) return;
+            var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
+            config.OllamaBaseUrl    = OllamaUrlBox.Text;
+            config.MegaLlmBaseUrl   = MegaLlmUrlBox.Text;
+            config.SelectedProvider = SelectedProvider;
+            config.SelectedModel    = ModelSelector.SelectedItem?.ToString() ?? "";
             RevenantWorkspaceWarden.Providers.SecretsManager.SaveConfig(config);
         }
 
