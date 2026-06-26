@@ -25,8 +25,9 @@ namespace RevenantWorkspaceWarden
             _host = host;
         }
 
-        private ILLMProvider GetCurrentProvider()
+        private ILLMProvider GetCurrentProvider(bool forceGroq = false)
         {
+            if (forceGroq) return new OpenAICompatibleProvider(_host, "Groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY");
             if (_host.SelectedProvider == "Gemini") return new GeminiProvider(_host);
             if (_host.SelectedProvider == "Anthropic") return new AnthropicProvider(_host);
             if (_host.SelectedProvider == "OpenAI") return new OpenAICompatibleProvider(_host, "OpenAI", "https://api.openai.com/v1", "OPENAI_API_KEY");
@@ -53,6 +54,7 @@ namespace RevenantWorkspaceWarden
                         UseShellExecute = false,
                         CreateNoWindow = true
                     };
+                    // rws-suppress: RWS-EXEC-001 FileName="ollama" and Arguments="serve" are string literals — no user input
                     _ollamaProcess = Process.Start(startInfo);
                     _host.AddSystemMessage("Ollama server started in background.");
                 }
@@ -94,13 +96,27 @@ namespace RevenantWorkspaceWarden
 
         public async Task<string?> SendToProviderAsync(string prompt, string? lessonContext = null)
         {
-            var provider = GetCurrentProvider();
-            var ct = CancellationToken.None; // Add a real CT if you want cancel support in UI
+            var ct = CancellationToken.None;
 
-            string systemPrompt = "";
+            if (_host.IsQuizMode)
+            {
+                var haiku = new Providers.AnthropicProvider(_host, overrideModel: "claude-haiku-4-5-20251001");
+                const string quizSystemPrompt =
+                    "You are a direct answer engine for a student taking a quiz. " +
+                    "Rules: (1) If the question is multiple choice, start your response with the letter or number of the correct answer. " +
+                    "(2) Follow with one concise sentence explaining why. " +
+                    "(3) If the question requires code, output only the working code — no explanation unless asked. " +
+                    "(4) Never guide the user through the problem. Never ask clarifying questions. Never use teaching techniques. " +
+                    "Write like an answer key, not a tutor.";
+                return await haiku.ChatAsync(quizSystemPrompt, prompt, ct);
+            }
+
+            var provider = GetCurrentProvider();
+            string systemPrompt;
+
             if (_host.IsTutorMode)
             {
-                systemPrompt = BuildFullTutorPrompt(lessonContext); // Base instruction
+                systemPrompt = BuildFullTutorPrompt(lessonContext);
                 prompt = $"Student content to review:\n```\n{prompt}\n```";
             }
             else
@@ -110,15 +126,10 @@ namespace RevenantWorkspaceWarden
 
             var text = await provider.ChatAsync(systemPrompt, prompt, ct);
 
-            // Enrichment is currently coupled to the tutor response format
             if (_host.IsTutorMode && !string.IsNullOrWhiteSpace(text))
             {
-                // We need to fetch the last UI message item to enrich it
                 var lastMsg = _host.Messages[_host.Messages.Count - 1];
-                if (lastMsg != null)
-                {
-                    EnrichTutorResponse(text, lastMsg);
-                }
+                if (lastMsg != null) EnrichTutorResponse(text, lastMsg);
             }
 
             return text;

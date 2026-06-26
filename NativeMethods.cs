@@ -28,7 +28,7 @@ namespace RevenantWorkspaceWarden
         [DllImport("user32.dll")]
         internal static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         internal static extern bool GetWindowText(IntPtr hWnd, StringBuilder text, int count);
 
         [StructLayout(LayoutKind.Sequential)]
