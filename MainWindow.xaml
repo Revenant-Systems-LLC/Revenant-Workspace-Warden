@@ -6,6 +6,7 @@
         Topmost="True" ShowInTaskbar="True" WindowStartupLocation="Manual"
         Icon="Assets/RWW_SAGEGOLD.ico"
         Loaded="Window_Loaded" Closed="Window_Closed"
+        KeyDown="Window_KeyDown"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
     <Window.Resources>
@@ -232,11 +233,71 @@
                                  BorderBrush="#3ad5a1" Padding="2"
                                  LostFocus="ContextBox_LostFocus"/>
 
-                        <CheckBox Name="TutorModeCheck"
-                                  Content="Tutor Mode (syllabus-aware + teaching)"
-                                  Foreground="#3ad5a1" Margin="0,10,0,0"
-                                  Checked="TutorModeCheck_Checked"
-                                  Unchecked="TutorModeCheck_Unchecked"/>
+                        <!-- Hotkey Settings -->
+                        <TextBlock Text="Hotkeys" Foreground="#888888"
+                                   FontWeight="Bold" Margin="0,12,0,6"/>
+
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="115"/>
+                                <ColumnDefinition Width="54"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Toggle Window"
+                                       Foreground="#888888" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Name="ToggleHotkeyBox"
+                                     IsReadOnly="True" Background="#0a0a0a" Foreground="#dfbe81"
+                                     BorderBrush="#333333" Padding="2,1" FontSize="11"
+                                     VerticalAlignment="Center" Margin="4,0"/>
+                            <Button Grid.Column="2" Name="RebindToggleBtn" Content="Rebind"
+                                    Background="#1e1e1e" Foreground="#3ad5a1"
+                                    BorderBrush="#3ad5a1" BorderThickness="1"
+                                    FontSize="10" Padding="2" Height="22"
+                                    Click="RebindToggleBtn_Click" Cursor="Hand"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="115"/>
+                                <ColumnDefinition Width="54"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Clipboard Review"
+                                       Foreground="#888888" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Name="ClipboardHotkeyBox"
+                                     IsReadOnly="True" Background="#0a0a0a" Foreground="#dfbe81"
+                                     BorderBrush="#333333" Padding="2,1" FontSize="11"
+                                     VerticalAlignment="Center" Margin="4,0"/>
+                            <Button Grid.Column="2" Name="RebindClipboardBtn" Content="Rebind"
+                                    Background="#1e1e1e" Foreground="#3ad5a1"
+                                    BorderBrush="#3ad5a1" BorderThickness="1"
+                                    FontSize="10" Padding="2" Height="22"
+                                    Click="RebindClipboardBtn_Click" Cursor="Hand"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="115"/>
+                                <ColumnDefinition Width="54"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Screen Capture"
+                                       Foreground="#888888" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Name="ScreenCaptureHotkeyBox"
+                                     IsReadOnly="True" Background="#0a0a0a" Foreground="#dfbe81"
+                                     BorderBrush="#333333" Padding="2,1" FontSize="11"
+                                     VerticalAlignment="Center" Margin="4,0"/>
+                            <Button Grid.Column="2" Name="RebindScreenBtn" Content="Rebind"
+                                    Background="#1e1e1e" Foreground="#3ad5a1"
+                                    BorderBrush="#3ad5a1" BorderThickness="1"
+                                    FontSize="10" Padding="2" Height="22"
+                                    Click="RebindScreenBtn_Click" Cursor="Hand"/>
+                        </Grid>
+
+                        <TextBlock Name="HotkeyHint" Text="" Foreground="#dfbe81"
+                                   FontSize="10" FontStyle="Italic" Margin="0,2,0,0"
+                                   TextWrapping="Wrap"/>
+
                     </StackPanel>
                     </ScrollViewer>
                 </Expander>
@@ -280,16 +341,18 @@
                                               Foreground="#555555"
                                               Visibility="{Binding HasThinkText, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               Margin="0,0,0,4">
-                                        <TextBlock Text="{Binding ThinkText}" Foreground="#888888"
-                                                   TextWrapping="Wrap" Margin="10,4,0,4"/>
+                                        <TextBox Text="{Binding ThinkText, Mode=OneWay}" Foreground="#888888"
+                                                   TextWrapping="Wrap" Margin="10,4,0,4"
+                                                   IsReadOnly="True" BorderThickness="0" Background="Transparent"/>
                                     </Expander>
 
                                     <!-- Main message text -->
-                                    <TextBlock Text="{Binding DisplayText}"
+                                    <TextBox Text="{Binding DisplayText, Mode=OneWay}"
                                                Foreground="{Binding TextColor}"
                                                FontWeight="{Binding TextWeight}"
                                                FontStyle="{Binding TextStyle}"
-                                               TextWrapping="Wrap"/>
+                                               TextWrapping="Wrap"
+                                               IsReadOnly="True" BorderThickness="0" Background="Transparent"/>
 
                                     <!-- Tutor: syllabus area tag -->
                                     <TextBlock Text="{Binding SyllabusArea}"
@@ -302,21 +365,22 @@
                                               Visibility="{Binding BeforeCode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <StackPanel>
                                             <TextBlock Text="Before:" Foreground="#ff8888" FontSize="10" Margin="0,2"/>
-                                            <TextBlock Text="{Binding BeforeCode}" FontFamily="Consolas" FontSize="10"
+                                            <TextBox Text="{Binding BeforeCode, Mode=OneWay}" FontFamily="Consolas" FontSize="10"
                                                        Foreground="#e0e0e0" TextWrapping="Wrap"
-                                                       Background="#0d0d0d" Padding="4"/>
+                                                       Background="#0d0d0d" Padding="4" IsReadOnly="True" BorderThickness="0"/>
                                             <TextBlock Text="After:" Foreground="#88ff88" FontSize="10" Margin="0,6,0,2"/>
-                                            <TextBlock Text="{Binding AfterCode}" FontFamily="Consolas" FontSize="10"
+                                            <TextBox Text="{Binding AfterCode, Mode=OneWay}" FontFamily="Consolas" FontSize="10"
                                                        Foreground="#e0e0e0" TextWrapping="Wrap"
-                                                       Background="#0d0d0d" Padding="4"/>
+                                                       Background="#0d0d0d" Padding="4" IsReadOnly="True" BorderThickness="0"/>
                                         </StackPanel>
                                     </Expander>
 
                                     <!-- Tutor: Teaching notes -->
                                     <Expander Header="Teaching Notes" Foreground="#3ad5a1" Margin="0,2,0,4"
                                               Visibility="{Binding TeachingNotes, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="{Binding TeachingNotes}" Foreground="#cccccc"
-                                                   TextWrapping="Wrap" FontSize="11" Margin="4"/>
+                                        <TextBox Text="{Binding TeachingNotes, Mode=OneWay}" Foreground="#cccccc"
+                                                   TextWrapping="Wrap" FontSize="11" Margin="4"
+                                                   IsReadOnly="True" BorderThickness="0" Background="Transparent"/>
                                     </Expander>
 
                                 </StackPanel>
@@ -342,6 +406,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -350,13 +415,34 @@
                             Width="30" Height="30"
                             Background="{StaticResource GoldGradient}"
                             Foreground="#0a0a0a" FontWeight="Bold"
-                            Click="AttachBtn_Click" Margin="0,0,5,0"
+                            Click="AttachBtn_Click" Margin="0,0,4,0"
                             ToolTip="Attach File for Review"/>
 
-                    <TextBox Grid.Column="2" Name="InputBox"
+                    <!-- Mode toggle buttons -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,5,0">
+                        <ToggleButton Name="QuizModeBtn" Content="QUIZ"
+                                      Width="46" Height="30"
+                                      FontSize="10" FontWeight="Bold"
+                                      Background="#1a1a1a" Foreground="#888888"
+                                      BorderBrush="#333333" BorderThickness="1"
+                                      Margin="0,0,2,0"
+                                      Checked="QuizModeBtn_Checked"
+                                      Unchecked="QuizModeBtn_Unchecked"
+                                      ToolTip="Quiz Mode — fast answer + why (Anthropic Haiku)"/>
+                        <ToggleButton Name="TutorModeBtn" Content="TUTOR"
+                                      Width="46" Height="30"
+                                      FontSize="10" FontWeight="Bold"
+                                      Background="#1a1a1a" Foreground="#888888"
+                                      BorderBrush="#333333" BorderThickness="1"
+                                      Checked="TutorModeBtn_Checked"
+                                      Unchecked="TutorModeBtn_Unchecked"
+                                      ToolTip="Tutor/Code Mode — full breakdown and code"/>
+                    </StackPanel>
+
+                    <TextBox Grid.Column="3" Name="InputBox"
                              Background="#80010806" Foreground="#e0e0e0"
                              BorderBrush="#3ad5a1" BorderThickness="1"
-                             Padding="5" VerticalContentAlignment="Center"
+                             Padding="5" MinHeight="30" MaxHeight="200"
                              AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                              KeyDown="InputBox_KeyDown"/>
                 </Grid>

@@ -25,47 +25,17 @@ namespace RevenantWorkspaceWarden.Providers
 
         public async Task<List<string>> GetAvailableModelsAsync()
         {
-            var modelList = new List<string>();
-            var secureApiKey = await SecretsManager.GetApiKeyAsync("MEGALLM_API_KEY", msg => _host.AddSystemMessage(msg));
-            if (secureApiKey == null || secureApiKey.Length == 0) return modelList;
-
-            string? apiKey = SecretsManager.UnsecureKey(secureApiKey);
-            if (string.IsNullOrWhiteSpace(apiKey)) return modelList;
-
-            try
+            // MegaLLM acts as a proxy for Anthropic models and does not support standard /v1/models.
+            // We hardcode the supported models as per MegaLLM documentation.
+            var modelList = new List<string>
             {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-                
-                var response = await client.GetAsync($"{_baseUrl}/v1/models");
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    using var doc = JsonDocument.Parse(json);
-                    var data = doc.RootElement.GetProperty("data");
-                    foreach (var model in data.EnumerateArray())
-                    {
-                        string modelName = model.GetProperty("id").GetString() ?? "";
-                        if (!string.IsNullOrWhiteSpace(modelName))
-                            modelList.Add(modelName);
-                    }
-                }
-                else
-                {
-                    _host.AddSystemMessage($"MegaLLM failed to load models. Status: {response.StatusCode}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _host.AddSystemMessage($"Error reaching MegaLLM for models: {ex.Message}");
-            }
-            finally
-            {
-                // Clear the key from memory
-                apiKey = null;
-            }
-
-            return modelList;
+                "claude-opus-4-1-20250805",
+                "claude-3.5-sonnet",
+                "claude-3.7-sonnet",
+                "claude-sonnet-4"
+            };
+            
+            return await Task.FromResult(modelList);
         }
 
         public async Task<string?> ChatAsync(string systemPrompt, string userPrompt, CancellationToken ct)
@@ -88,23 +58,24 @@ namespace RevenantWorkspaceWarden.Providers
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+                client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
 
                 var requestBody = new
                 {
                     model = _host.SelectedModel,
+                    max_tokens = Math.Min(_host.ContextSize > 0 ? _host.ContextSize : 4096, 8192),
+                    system = systemPrompt,
                     messages = new[]
                     {
-                        new { role = "system", content = systemPrompt },
                         new { role = "user", content = userPrompt }
                     },
                     stream = true,
-                    temperature = _host.Temperature,
-                    max_tokens = _host.ContextSize // Note: OpenAI uses max_tokens for generation limit, but sometimes num_ctx isn't supported standard
+                    temperature = _host.Temperature
                 };
 
                 string jsonBody = JsonSerializer.Serialize(requestBody);
-                using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/v1/chat/completions")
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/v1/messages")
                 {
                     Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
                 };
@@ -140,23 +111,32 @@ namespace RevenantWorkspaceWarden.Providers
                         try
                         {
                             using var chunk = JsonDocument.Parse(jsonChunk);
-                            var choices = chunk.RootElement.GetProperty("choices");
-                            if (choices.GetArrayLength() > 0)
+                            if (chunk.RootElement.TryGetProperty("type", out var typeElem))
                             {
-                                var delta = choices[0].GetProperty("delta");
-                                if (delta.TryGetProperty("content", out var contentElem))
+                                string? eventType = typeElem.GetString();
+                                if (eventType == "content_block_delta")
                                 {
-                                    string? token = contentElem.GetString();
-                                    if (token != null)
+                                    if (chunk.RootElement.TryGetProperty("delta", out var deltaElem))
                                     {
-                                        sb.Append(token);
-                                        string snapshot = "RWW: " + sb.ToString();
-                                        _host.DispatchToUiThread(() =>
+                                        if (deltaElem.TryGetProperty("text", out var textElem))
                                         {
-                                            if (aiMessage != null) aiMessage.DisplayText = snapshot;
-                                            _host.ScrollToBottom();
-                                        });
+                                            string? token = textElem.GetString();
+                                            if (token != null)
+                                            {
+                                                sb.Append(token);
+                                                string snapshot = "RWW: " + sb.ToString();
+                                                _host.DispatchToUiThread(() =>
+                                                {
+                                                    if (aiMessage != null) aiMessage.DisplayText = snapshot;
+                                                    _host.ScrollToBottom();
+                                                });
+                                            }
+                                        }
                                     }
+                                }
+                                else if (eventType == "message_stop")
+                                {
+                                    break;
                                 }
                             }
                         }

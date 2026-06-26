@@ -47,6 +47,7 @@ namespace RevenantWorkspaceWarden
 
         // ── IWardenHost State ─────────────────────────────────────────────────────
         public bool    IsTutorMode          { get; set; } = false;
+        public bool    IsQuizMode           { get; set; } = false;
         public string? LastReviewableContent { get; set; }
         public IReadOnlyList<MessageItem> Messages => _messages;
 
@@ -85,20 +86,139 @@ namespace RevenantWorkspaceWarden
         // Window Lifecycle
         // =========================================================================
 
+        // ── Hotkey Rebind State ───────────────────────────────────────────────────
+        private int _rebindTarget = 0; // 0=none, HOTKEY_ID / CLIPBOARD_HOTKEY_ID / SCREEN_CAPTURE_HOTKEY_ID
+        private Button? _rebindActiveBtn = null;
+
+        private void ApplyHotkeyBindings(Providers.AppConfig config)
+        {
+            NativeMethods.UnregisterHotKey(_windowHandle, HOTKEY_ID);
+            NativeMethods.UnregisterHotKey(_windowHandle, CLIPBOARD_HOTKEY_ID);
+            NativeMethods.UnregisterHotKey(_windowHandle, SCREEN_CAPTURE_HOTKEY_ID);
+
+            if (!NativeMethods.RegisterHotKey(_windowHandle, HOTKEY_ID,
+                    config.ToggleHotkey.Modifiers, config.ToggleHotkey.VirtualKey))
+                AddSystemMessage($"⚠ {config.ToggleHotkey.DisplayName} already in use — toggle unavailable.");
+
+            if (!NativeMethods.RegisterHotKey(_windowHandle, CLIPBOARD_HOTKEY_ID,
+                    config.ClipboardHotkey.Modifiers, config.ClipboardHotkey.VirtualKey))
+                AddSystemMessage($"⚠ {config.ClipboardHotkey.DisplayName} already in use — clipboard review unavailable.");
+
+            if (!NativeMethods.RegisterHotKey(_windowHandle, SCREEN_CAPTURE_HOTKEY_ID,
+                    config.ScreenCaptureHotkey.Modifiers, config.ScreenCaptureHotkey.VirtualKey))
+                AddSystemMessage($"⚠ {config.ScreenCaptureHotkey.DisplayName} already in use — screen capture unavailable.");
+
+            ToggleHotkeyBox.Text       = config.ToggleHotkey.DisplayName;
+            ClipboardHotkeyBox.Text    = config.ClipboardHotkey.DisplayName;
+            ScreenCaptureHotkeyBox.Text = config.ScreenCaptureHotkey.DisplayName;
+        }
+
+        private static string BuildHotkeyDisplayName(uint modifiers, uint vk)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            if ((modifiers & 0x0002) != 0) parts.Add("Ctrl");
+            if ((modifiers & 0x0001) != 0) parts.Add("Alt");
+            if ((modifiers & 0x0008) != 0) parts.Add("Shift");
+            var key = System.Windows.Input.KeyInterop.KeyFromVirtualKey((int)vk);
+            parts.Add(key.ToString());
+            return string.Join("+", parts);
+        }
+
+        private void StartRebind(int hotkeyId, Button btn)
+        {
+            if (_rebindTarget != 0) CancelRebind();
+            _rebindTarget   = hotkeyId;
+            _rebindActiveBtn = btn;
+            btn.Content     = "Press keys…";
+            btn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#dfbe81"));
+            HotkeyHint.Text = "Press your combo. Esc to cancel. Bare keys allowed but may conflict.";
+        }
+
+        private void CancelRebind()
+        {
+            if (_rebindActiveBtn != null)
+            {
+                _rebindActiveBtn.Content   = "Rebind";
+                _rebindActiveBtn.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3ad5a1"));
+            }
+            _rebindTarget    = 0;
+            _rebindActiveBtn = null;
+            HotkeyHint.Text  = "";
+        }
+
+        private void RebindToggleBtn_Click(object sender, RoutedEventArgs e)
+            => StartRebind(HOTKEY_ID, RebindToggleBtn);
+        private void RebindClipboardBtn_Click(object sender, RoutedEventArgs e)
+            => StartRebind(CLIPBOARD_HOTKEY_ID, RebindClipboardBtn);
+        private void RebindScreenBtn_Click(object sender, RoutedEventArgs e)
+            => StartRebind(SCREEN_CAPTURE_HOTKEY_ID, RebindScreenBtn);
+
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (_rebindTarget == 0) return;
+
+            e.Handled = true;
+
+            if (e.Key == System.Windows.Input.Key.Escape) { CancelRebind(); return; }
+
+            // Ignore bare modifier keys — wait for an actual key
+            var key = e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key;
+            if (key == System.Windows.Input.Key.LeftCtrl  || key == System.Windows.Input.Key.RightCtrl  ||
+                key == System.Windows.Input.Key.LeftAlt   || key == System.Windows.Input.Key.RightAlt   ||
+                key == System.Windows.Input.Key.LeftShift || key == System.Windows.Input.Key.RightShift ||
+                key == System.Windows.Input.Key.LWin      || key == System.Windows.Input.Key.RWin)
+                return;
+
+            uint modifiers = 0;
+            if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftCtrl)  ||
+                System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightCtrl))
+                modifiers |= MOD_CONTROL;
+            if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftAlt)   ||
+                System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightAlt))
+                modifiers |= MOD_ALT;
+            if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift) ||
+                System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightShift))
+                modifiers |= 0x0008; // MOD_SHIFT
+
+            uint vk = (uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(key);
+
+            var config = Providers.SecretsManager.LoadConfig();
+            string displayName = BuildHotkeyDisplayName(modifiers, vk);
+
+            switch (_rebindTarget)
+            {
+                case HOTKEY_ID:
+                    config.ToggleHotkey = new Providers.HotkeyBinding
+                        { Modifiers = modifiers, VirtualKey = vk, DisplayName = displayName };
+                    break;
+                case CLIPBOARD_HOTKEY_ID:
+                    config.ClipboardHotkey = new Providers.HotkeyBinding
+                        { Modifiers = modifiers, VirtualKey = vk, DisplayName = displayName };
+                    break;
+                case SCREEN_CAPTURE_HOTKEY_ID:
+                    config.ScreenCaptureHotkey = new Providers.HotkeyBinding
+                        { Modifiers = modifiers, VirtualKey = vk, DisplayName = displayName };
+                    break;
+            }
+
+            Providers.SecretsManager.SaveConfig(config);
+            CancelRebind();
+            ApplyHotkeyBindings(config);
+
+            if (modifiers == 0)
+                AddSystemMessage($"⚠ {displayName} is a bare key — may conflict with other apps.");
+            else
+                AddSystemMessage($"Hotkey saved: {displayName}");
+        }
+
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             _windowHandle = new WindowInteropHelper(this).Handle;
             _source       = HwndSource.FromHwnd(_windowHandle);
             _source.AddHook(HwndHook);
 
-            if (!NativeMethods.RegisterHotKey(_windowHandle, HOTKEY_ID, 0, VK_F5))
-                AddSystemMessage("⚠ F5 hotkey already in use — toggle visibility unavailable.");
-            if (!NativeMethods.RegisterHotKey(_windowHandle, CLIPBOARD_HOTKEY_ID, 0, VK_DIVIDE))
-                AddSystemMessage("⚠ Numpad Divide hotkey already in use — clipboard review unavailable.");
-            if (!NativeMethods.RegisterHotKey(_windowHandle, SCREEN_CAPTURE_HOTKEY_ID, 0, VK_F2))
-                AddSystemMessage("⚠ F2 hotkey already in use — screen capture unavailable.");
-
             var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
+            ApplyHotkeyBindings(config);
             OllamaUrlBox.Text = config.OllamaBaseUrl;
             MegaLlmUrlBox.Text = config.MegaLlmBaseUrl;
             
@@ -386,8 +506,7 @@ namespace RevenantWorkspaceWarden
         {
             Dispatcher.Invoke(() =>
             {
-                if (TutorModeCheck != null)
-                    TutorModeCheck.IsChecked = isChecked;
+                if (TutorModeBtn != null) TutorModeBtn.IsChecked = isChecked;
             });
         }
 
@@ -529,7 +648,7 @@ namespace RevenantWorkspaceWarden
                 LastReviewableContent = content;
 
                 await DispatchLlmAsync(
-                    $"Review this file submission. Provide a brutal, professorial code review " +
+                    $"Review this file submission. Provide a thorough, constructive code review " +
                     $"capturing logic errors, security flaws, or bad patterns.\n\n" +
                     $"FILE: {Path.GetFileName(path)}\n\nSOURCE CODE:\n{content}");
             }
@@ -556,6 +675,7 @@ namespace RevenantWorkspaceWarden
             AddUserMessage(text);
 
             if      (lower == "/save")                  _chatSessionManager.SaveChatSession();
+            else if (lower.StartsWith("/activate"))     await HandleActivateCommandAsync(trimmed.Length > 9 ? trimmed[9..].Trim() : "");
             else if (lower.StartsWith("/tutor"))        await HandleTutorCommandAsync(trimmed.Length > 6 ? trimmed[6..].Trim() : "");
             else if (lower.StartsWith("/quick"))        await HandleQuickCommandAsync(trimmed.Length > 6 ? trimmed[6..].Trim() : "");
             else if (lower is "/screen" or "/capture" or "/look")
@@ -572,6 +692,12 @@ namespace RevenantWorkspaceWarden
 
         private async Task HandleTutorCommandAsync(string content)
         {
+            if (!Providers.LicenseManager.IsActivated)
+            {
+                AddSystemMessage("Tutor Mode requires Workspace Warden Pro. Use /activate <key> or click TUTOR to unlock.");
+                ShowActivationWindow();
+                return;
+            }
             if (string.IsNullOrWhiteSpace(content))
             {
                 AddSystemMessage("Usage: /tutor <your code or question>   —  forces Full Tutor mode for this request.");
@@ -579,6 +705,25 @@ namespace RevenantWorkspaceWarden
             }
             AddSystemMessage("Tutor Mode (forced for this request)...");
             await DispatchLlmAsync(content, forceTutor: true);
+        }
+
+        private async Task HandleActivateCommandAsync(string licenseKey)
+        {
+            if (string.IsNullOrWhiteSpace(licenseKey))
+            {
+                AddSystemMessage("Usage: /activate <license-key>");
+                return;
+            }
+            AddSystemMessage("Contacting activation server...");
+            var (success, message) = await Providers.LicenseManager.ActivateAsync(licenseKey);
+            AddSystemMessage(success ? $"[Pro] {message}" : $"[Error] {message}");
+        }
+
+        private void ShowActivationWindow()
+        {
+            var win = new UI.ActivationWindow { Owner = this };
+            if (win.ShowDialog() == true)
+                AddSystemMessage("[Pro] Workspace Warden Pro is now active. TUTOR and QUIZ modes unlocked.");
         }
 
         private async Task HandleQuickCommandAsync(string content)
@@ -618,13 +763,13 @@ namespace RevenantWorkspaceWarden
         {
             if (OllamaUrlBox == null || MegaLlmUrlBox == null || ModelSelector == null) return; // Not fully initialized yet
 
-            var config = new RevenantWorkspaceWarden.Providers.AppConfig
-            {
-                OllamaBaseUrl = OllamaUrlBox.Text,
-                MegaLlmBaseUrl = MegaLlmUrlBox.Text,
-                SelectedProvider = SelectedProvider,
-                SelectedModel = ModelSelector.SelectedItem?.ToString() ?? ""
-            };
+            // Load existing config first so fields we don't set here
+            // (HasCompletedTutorial, API keys, etc.) survive the save.
+            var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
+            config.OllamaBaseUrl = OllamaUrlBox.Text;
+            config.MegaLlmBaseUrl = MegaLlmUrlBox.Text;
+            config.SelectedProvider = SelectedProvider;
+            config.SelectedModel = ModelSelector.SelectedItem?.ToString() ?? "";
             RevenantWorkspaceWarden.Providers.SecretsManager.SaveConfig(config);
         }
 
@@ -637,16 +782,70 @@ namespace RevenantWorkspaceWarden
             apiKeysWindow.ShowDialog();
         }
 
-        private void TutorModeCheck_Checked(object sender, RoutedEventArgs e)
+        private void QuizModeBtn_Checked(object sender, RoutedEventArgs e)
         {
-            IsTutorMode = true;
-            AddSystemMessage("Tutor Mode enabled — reviews will use structured syllabus-aware prompts with teaching focus.");
+            if (!Providers.LicenseManager.IsActivated)
+            {
+                QuizModeBtn.IsChecked = false;
+                ShowActivationWindow();
+                return;
+            }
+
+            IsQuizMode  = true;
+            IsTutorMode = false;
+            if (TutorModeBtn != null) TutorModeBtn.IsChecked = false;
+            QuizModeBtn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#dfbe81"));
+            QuizModeBtn.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#dfbe81"));
+            if (TutorModeBtn != null)
+            {
+                TutorModeBtn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#888888"));
+                TutorModeBtn.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333333"));
+            }
+            AddSystemMessage("Quiz Mode — answer + one-line why. Routed to Haiku.");
         }
 
-        private void TutorModeCheck_Unchecked(object sender, RoutedEventArgs e)
+        private void QuizModeBtn_Unchecked(object sender, RoutedEventArgs e)
+        {
+            IsQuizMode = false;
+            QuizModeBtn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#888888"));
+            QuizModeBtn.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333333"));
+        }
+
+        private void TutorModeBtn_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!Providers.LicenseManager.IsActivated)
+            {
+                TutorModeBtn.IsChecked = false;
+                ShowActivationWindow();
+                return;
+            }
+
+            IsTutorMode = true;
+            IsQuizMode  = false;
+            if (QuizModeBtn != null) QuizModeBtn.IsChecked = false;
+            TutorModeBtn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3ad5a1"));
+            TutorModeBtn.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3ad5a1"));
+            if (QuizModeBtn != null)
+            {
+                QuizModeBtn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#888888"));
+                QuizModeBtn.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333333"));
+            }
+            AddSystemMessage("Tutor/Code Mode — full breakdown, working code, structured review.");
+        }
+
+        private void TutorModeBtn_Unchecked(object sender, RoutedEventArgs e)
         {
             IsTutorMode = false;
-            AddSystemMessage("Tutor Mode disabled — back to quick reviews.");
+            TutorModeBtn.Foreground  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#888888"));
+            TutorModeBtn.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333333"));
+        }
+
+        public void SetQuizModeChecked(bool isChecked)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (QuizModeBtn != null) QuizModeBtn.IsChecked = isChecked;
+            });
         }
 
         private int GetMaxContextLimit(string modelName)

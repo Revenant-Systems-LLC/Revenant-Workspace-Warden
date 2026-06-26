@@ -13,12 +13,14 @@ namespace RevenantWorkspaceWarden.Providers
     {
         private readonly IWardenHost _host;
         private readonly string _baseUrl = "https://api.anthropic.com/v1";
-        
+        private readonly string? _overrideModel;
+
         public string Name => "Anthropic";
 
-        public AnthropicProvider(IWardenHost host)
+        public AnthropicProvider(IWardenHost host, string? overrideModel = null)
         {
             _host = host;
+            _overrideModel = overrideModel;
         }
 
         public async Task<List<string>> GetAvailableModelsAsync()
@@ -27,11 +29,11 @@ namespace RevenantWorkspaceWarden.Providers
             // We will hardcode their currently supported models.
             return new List<string>
             {
+                "claude-opus-4-8",
+                "claude-sonnet-4-6",
+                "claude-haiku-4-5-20251001",
                 "claude-3-5-sonnet-20241022",
                 "claude-3-5-haiku-20241022",
-                "claude-3-opus-20240229",
-                "claude-3-sonnet-20240229",
-                "claude-3-haiku-20240307"
             };
         }
 
@@ -60,7 +62,7 @@ namespace RevenantWorkspaceWarden.Providers
 
                 var requestBody = new
                 {
-                    model = _host.SelectedModel,
+                    model = _overrideModel ?? _host.SelectedModel,
                     system = systemPrompt,
                     messages = new[]
                     {
@@ -68,7 +70,7 @@ namespace RevenantWorkspaceWarden.Providers
                     },
                     stream = true,
                     temperature = _host.Temperature,
-                    max_tokens = _host.ContextSize
+                    max_tokens = Math.Min(_host.ContextSize, 8192)
                 };
 
                 string jsonBody = JsonSerializer.Serialize(requestBody);

@@ -42,3 +42,5 @@ Secrets.env
 *.key
 *.pem
 config.local.*
+user-secrets.json
+user_inputs.json1
