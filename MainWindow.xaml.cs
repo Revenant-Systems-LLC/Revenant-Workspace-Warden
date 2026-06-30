@@ -47,6 +47,7 @@ namespace RevenantWorkspaceWarden
 
         // ── IWardenHost State ─────────────────────────────────────────────────────
         public bool    IsTutorMode          { get; set; } = false;
+        public bool    IsQuizMode           { get; set; } = false;
         public string? LastReviewableContent { get; set; }
         public IReadOnlyList<MessageItem> Messages => _messages;
 
@@ -618,13 +619,12 @@ namespace RevenantWorkspaceWarden
         {
             if (OllamaUrlBox == null || MegaLlmUrlBox == null || ModelSelector == null) return; // Not fully initialized yet
 
-            var config = new RevenantWorkspaceWarden.Providers.AppConfig
-            {
-                OllamaBaseUrl = OllamaUrlBox.Text,
-                MegaLlmBaseUrl = MegaLlmUrlBox.Text,
-                SelectedProvider = SelectedProvider,
-                SelectedModel = ModelSelector.SelectedItem?.ToString() ?? ""
-            };
+            // Load first to preserve fields we don't own here (e.g. HasCompletedTutorial).
+            var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
+            config.OllamaBaseUrl    = OllamaUrlBox.Text;
+            config.MegaLlmBaseUrl   = MegaLlmUrlBox.Text;
+            config.SelectedProvider = SelectedProvider;
+            config.SelectedModel    = ModelSelector.SelectedItem?.ToString() ?? "";
             RevenantWorkspaceWarden.Providers.SecretsManager.SaveConfig(config);
         }
 

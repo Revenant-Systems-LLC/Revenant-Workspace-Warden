@@ -50,6 +50,12 @@ namespace RevenantWorkspaceWarden
         bool IsTutorMode { get; set; }
 
         /// <summary>
+        /// When true, the next prompt is answered by claude-haiku as a direct answer engine
+        /// (quiz/homework mode) rather than routing through the configured provider.
+        /// </summary>
+        bool IsQuizMode { get; set; }
+
+        /// <summary>
         /// The last text the user copied (Ctrl+Alt+C) or attached via the file picker.
         /// </summary>
         string? LastReviewableContent { get; set; }
