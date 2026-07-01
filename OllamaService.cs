@@ -98,19 +98,6 @@ namespace RevenantWorkspaceWarden
         {
             var ct = CancellationToken.None;
 
-            if (_host.IsQuizMode)
-            {
-                var haiku = new Providers.AnthropicProvider(_host, overrideModel: "claude-haiku-4-5-20251001");
-                const string quizSystemPrompt =
-                    "You are a direct answer engine for a student taking a quiz. " +
-                    "Rules: (1) If the question is multiple choice, start your response with the letter or number of the correct answer. " +
-                    "(2) Follow with one concise sentence explaining why. " +
-                    "(3) If the question requires code, output only the working code — no explanation unless asked. " +
-                    "(4) Never guide the user through the problem. Never ask clarifying questions. Never use teaching techniques. " +
-                    "Write like an answer key, not a tutor.";
-                return await haiku.ChatAsync(quizSystemPrompt, prompt, ct);
-            }
-
             var provider = GetCurrentProvider();
             string systemPrompt;
 
