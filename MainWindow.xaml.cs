@@ -5,13 +5,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace RevenantWorkspaceWarden
@@ -45,6 +48,17 @@ namespace RevenantWorkspaceWarden
         private OcrService          _ocrService         = null!;
         private ChatSessionManager  _chatSessionManager = null!;
 
+        // ── Sidekick / Code Telemetry / State Cache ───────────────────────────────
+        private readonly ObservableCollection<SidekickFindingVm> _sidekickFindings = new();
+        private string _sidekickScanPath = "";
+        private readonly DispatcherTimer _saveCourseCacheTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+        private readonly DispatcherTimer _memTimer      = new() { Interval = TimeSpan.FromSeconds(5) };
+        private readonly DispatcherTimer _saveCacheTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+        private string _currentFilePath    = "";
+        private string _currentLang        = "";
+        private string _currentFileContent = "";
+        private string _lastWorkspaceRoot  = "";
+
         // ── IWardenHost State ─────────────────────────────────────────────────────
         public bool    IsTutorMode          { get; set; } = false;
         public bool    IsQuizMode           { get; set; } = false;
@@ -68,12 +82,8 @@ namespace RevenantWorkspaceWarden
         public MainWindow()
         {
             InitializeComponent();
-            ChatHistory.ItemsSource = _messages;
-
-            // Bottom-right corner
-            var workArea = SystemParameters.WorkArea;
-            Left = workArea.Right  - Width  - 20;
-            Top  = workArea.Bottom - Height - 20;
+            ChatHistory.ItemsSource      = _messages;
+            SidekickFindingsList.ItemsSource = _sidekickFindings;
 
             _ollamaService      = new OllamaService(this);
             _ocrService         = new OcrService(this);
@@ -139,7 +149,7 @@ namespace RevenantWorkspaceWarden
             if (_rebindActiveBtn != null)
             {
                 _rebindActiveBtn.Content   = "Rebind";
-                _rebindActiveBtn.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3ad5a1"));
+                _rebindActiveBtn.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#dfbe81"));
             }
             _rebindTarget    = 0;
             _rebindActiveBtn = null;
@@ -235,6 +245,20 @@ namespace RevenantWorkspaceWarden
             {
                 _ollamaService.StartOllama();
             }
+
+            LoadStateCache();
+
+            _memTimer.Tick += (s, ev) =>
+            {
+                var mb = Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024);
+                Dispatcher.Invoke(() => MemoryLabel.Text = $"Memory: {mb} MB");
+            };
+            _memTimer.Start();
+
+            _saveCacheTimer.Tick   += (s, ev) => { _saveCacheTimer.Stop();       SaveStateCache();  };
+            _saveCourseCacheTimer.Tick += (s, ev) => { _saveCourseCacheTimer.Stop(); SaveCourseData(); };
+
+            LoadCourseData();
 
             await PopulateModelListAsync(config.SelectedModel);
         }
@@ -551,7 +575,7 @@ namespace RevenantWorkspaceWarden
         private void ToggleVisibility()
         {
             if (Visibility == Visibility.Visible) { Hide(); }
-            else { Show(); Activate(); InputBox.Focus(); }
+            else { Show(); Activate(); CodeViewer.Focus(); }
         }
 
         private async void ProcessClipboardReview()
@@ -714,9 +738,11 @@ namespace RevenantWorkspaceWarden
                 AddSystemMessage("Usage: /activate <license-key>");
                 return;
             }
-            AddSystemMessage("Contacting activation server...");
-            var (success, message) = await Providers.LicenseManager.ActivateAsync(licenseKey);
-            AddSystemMessage(success ? $"[Pro] {message}" : $"[Error] {message}");
+            AddSystemMessage("Validating license key...");
+            var success = Providers.LicenseManager.ValidateAndActivate(licenseKey);
+            AddSystemMessage(success
+                ? "[Pro] Activation successful. Pro features are now unlocked."
+                : "[Error] Invalid license key. Check your key and try again.");
         }
 
         private void ShowActivationWindow()
@@ -756,7 +782,30 @@ namespace RevenantWorkspaceWarden
         private void ProviderSelector_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             SaveCurrentConfig();
+            WarnIfProviderKeyMissing();
             _ = PopulateModelListAsync();
+        }
+
+        // Cloud providers that require a stored API key (Ollama is local and needs none).
+        private static readonly System.Collections.Generic.Dictionary<string, string> ProviderKeyNames = new()
+        {
+            ["OpenAI"]     = "OPENAI_API_KEY",
+            ["OpenRouter"] = "OPENROUTER_API_KEY",
+            ["Anthropic"]  = "ANTHROPIC_API_KEY",
+            ["Groq"]       = "GROQ_API_KEY",
+            ["xAI"]        = "XAI_API_KEY",
+            ["Gemini"]     = "GEMINI_API_KEY",
+            ["MegaLLM"]    = "MEGALLM_API_KEY",
+        };
+
+        private void WarnIfProviderKeyMissing()
+        {
+            string provider = SelectedProvider;
+            if (ProviderKeyNames.TryGetValue(provider, out var keyName)
+                && !RevenantWorkspaceWarden.Providers.SecretsManager.HasEncryptedKey(keyName))
+            {
+                AddSystemMessage($"[Setup] {provider} has no API key yet — add one via Manage API Keys, or pick a provider you've already configured.");
+            }
         }
 
         private void SaveCurrentConfig()
@@ -888,6 +937,540 @@ namespace RevenantWorkspaceWarden
                     ContextBox.Text = maxLimit.ToString();
                 }
             }
+        }
+
+        // =========================================================================
+        // Workspace Tree
+        // =========================================================================
+
+        private void SetWorkspaceRoot_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Select workspace root" };
+            if (dialog.ShowDialog() != true) return;
+            LoadWorkspaceRoot(dialog.FolderName);
+            DeferSaveStateCache();
+        }
+
+        private void LoadWorkspaceRoot(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return;
+            _lastWorkspaceRoot = path;
+            var nodes = new List<FileSystemNode>();
+            try
+            {
+                foreach (var dir in Directory.GetDirectories(path))
+                    nodes.Add(new FileSystemNode(dir, true));
+                foreach (var file in Directory.GetFiles(path))
+                    nodes.Add(new FileSystemNode(file, false));
+            }
+            catch { }
+            WorkspaceTree.ItemsSource = nodes;
+            AddSystemMessage($"[Workspace] {path}");
+        }
+
+        private void WorkspaceTree_SelectedItemChanged(
+            object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is FileSystemNode node && !node.IsDirectory)
+                LoadFileToCenter(node.FullPath);
+        }
+
+        private void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TreeViewItem item && item.DataContext is FileSystemNode node)
+                node.LoadChildren();
+        }
+
+        // =========================================================================
+        // Code Telemetry
+        // =========================================================================
+
+        private void LoadFileToCenter(string path)
+        {
+            _currentFilePath = path;
+            _currentLang     = GetLanguageLabel(Path.GetExtension(path));
+            FileBreadcrumb.Text = path;
+            LangBadge.Text      = _currentLang;
+
+            try
+            {
+                var info = new FileInfo(path);
+                if (info.Length > 512 * 1024)
+                {
+                    _currentFileContent = "";
+                    var shortDoc = new FlowDocument();
+                    shortDoc.Blocks.Add(new Paragraph(
+                        new Run($"[File too large: {info.Length / 1024} KB — open in editor]")));
+                    CodeViewer.Document = shortDoc;
+                    MetricsBar.Children.Clear();
+                    return;
+                }
+                _currentFileContent = File.ReadAllText(path);
+            }
+            catch (Exception ex)
+            {
+                AddSystemMessage($"[Code Viewer] {ex.Message}");
+                return;
+            }
+
+            var flowDoc = new FlowDocument { FontFamily = new FontFamily("Consolas"), FontSize = 12 };
+            flowDoc.Blocks.Add(new Paragraph(new Run(_currentFileContent)));
+            CodeViewer.Document = flowDoc;
+
+            MetricsBar.Children.Clear();
+            foreach (var (label, value) in ComputeMetrics(_currentFileContent, Path.GetExtension(path)))
+                MetricsBar.Children.Add(MakeMetricChip($"{label}: {value}"));
+        }
+
+        private static string GetLanguageLabel(string ext) => ext.ToLowerInvariant() switch
+        {
+            ".cs"   => "C#",
+            ".py"   => "PY",
+            ".ts"   => "TS",
+            ".tsx"  => "TSX",
+            ".js"   => "JS",
+            ".jsx"  => "JSX",
+            ".rs"   => "RS",
+            ".go"   => "GO",
+            ".xaml" => "XAML",
+            ".xml"  => "XML",
+            ".json" => "JSON",
+            ".md"   => "MD",
+            ".html" => "HTML",
+            ".css"  => "CSS",
+            ".sql"  => "SQL",
+            _       => "TXT"
+        };
+
+        private List<(string, string)> ComputeMetrics(string content, string ext)
+        {
+            int lines      = content.Split('\n').Length;
+            int todos      = Regex.Matches(content, @"//\s*TODO", RegexOptions.IgnoreCase).Count;
+            int complexity = Regex.Matches(content,
+                @"\b(if|else if|for|foreach|while|switch|case|catch)\b").Count;
+            string complexLabel = complexity < 10 ? "Low" : complexity < 30 ? "Medium" : "High";
+            long bytes = 0;
+            try { bytes = new FileInfo(_currentFilePath).Length; } catch { }
+            string sizeStr = bytes < 1024 ? $"{bytes} B" : $"{bytes / 1024} KB";
+            return new List<(string, string)>
+            {
+                ("Lines",      lines.ToString()),
+                ("TODOs",      todos.ToString()),
+                ("Complexity", complexLabel),
+                ("Size",       sizeStr)
+            };
+        }
+
+        private static Border MakeMetricChip(string text) => new Border
+        {
+            BorderBrush     = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2D3748")),
+            BorderThickness = new Thickness(1),
+            CornerRadius    = new CornerRadius(3),
+            Padding         = new Thickness(6, 2, 6, 2),
+            Margin          = new Thickness(2, 0, 2, 0),
+            Child = new TextBlock
+            {
+                Text       = text,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize   = 11,
+                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A8B5C8"))
+            }
+        };
+
+        private async void AnalyzeWithAxiom_Click(object sender, RoutedEventArgs e)
+        {
+            // Prefer loaded-file content; fall back to whatever is in the chalkboard
+            string code = _currentFileContent;
+            if (string.IsNullOrEmpty(code))
+            {
+                var range = new TextRange(CodeViewer.Document.ContentStart, CodeViewer.Document.ContentEnd);
+                code = range.Text.Trim();
+            }
+
+            if (string.IsNullOrEmpty(code))
+            {
+                AddSystemMessage("[Warden] Paste or load code into the chalkboard first.");
+                return;
+            }
+
+            string fileLabel = string.IsNullOrEmpty(_currentFilePath)
+                ? "pasted code"
+                : Path.GetFileName(_currentFilePath);
+            string langLabel = string.IsNullOrEmpty(_currentLang) ? "code" : _currentLang;
+
+            AddUserMessage($"[Check: {fileLabel}]");
+            AddSystemMessage("Sending to Axiom for review...");
+
+            string modeHint = IsTutorMode
+                ? "Give a thorough teaching review with before/after code examples and teaching notes."
+                : "Give a concise plain-text review: what's wrong and what to fix.";
+
+            string prompt =
+                $"{modeHint}\n\n" +
+                $"FILE: {fileLabel}  LANGUAGE: {langLabel}\n\n" +
+                $"CODE:\n{code}";
+
+            // Inject course context if the COURSE panel is open and has content
+            if (Providers.LicenseManager.IsActivated && CourseContent.Visibility == Visibility.Visible)
+            {
+                string syllabus   = CourseSyllabusBox.Text.Trim();
+                string assignment = CourseAssignmentBox.Text.Trim();
+                if (!string.IsNullOrEmpty(syllabus) || !string.IsNullOrEmpty(assignment))
+                {
+                    prompt += "\n\n--- COURSE CONTEXT ---";
+                    if (!string.IsNullOrEmpty(syllabus))   prompt += $"\nSyllabus:\n{syllabus}";
+                    if (!string.IsNullOrEmpty(assignment)) prompt += $"\n\nAssignment:\n{assignment}";
+                }
+            }
+
+            await DispatchLlmAsync(prompt);
+        }
+
+        // =========================================================================
+        // Workspace Panel Toggle
+        // =========================================================================
+
+        private void WorkspaceToggleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            bool collapsed = WorkspaceCol.Width.Value == 0;
+            WorkspaceCol.Width         = new GridLength(collapsed ? 220 : 0);
+            WorkspaceToggleBtn.Content = collapsed ? "◄ WS" : "WS ►";
+        }
+
+        // =========================================================================
+        // Sidekick Panel (RWS — Revenant Workspace Sidekick)
+        // =========================================================================
+
+        private void SidekickBtn_Click(object sender, RoutedEventArgs e)
+        {
+            bool opening = SidekickCol.Width.Value == 0;
+            SidekickCol.Width   = new GridLength(opening ? 300 : 0);
+            SidekickBtn.Content = opening ? "◄ SIDEKICK" : "SIDEKICK ►";
+
+            if (opening)
+            {
+                bool licensed = Providers.LicenseManager.IsActivated;
+                SidekickUpsell.Visibility  = licensed ? Visibility.Collapsed : Visibility.Visible;
+                SidekickScanner.Visibility = licensed ? Visibility.Visible   : Visibility.Collapsed;
+            }
+        }
+
+        private void SidekickActivate_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new UI.ActivationWindow();
+            if (win.ShowDialog() == true)
+            {
+                SidekickUpsell.Visibility  = Visibility.Collapsed;
+                SidekickScanner.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void SidekickBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFolderDialog { Title = "Select Project Folder to Scan" };
+            if (dialog.ShowDialog() == true)
+            {
+                _sidekickScanPath    = dialog.FolderName;
+                SidekickPathBox.Text = dialog.FolderName;
+            }
+        }
+
+        private async void SidekickScan_Click(object sender, RoutedEventArgs e)
+        {
+            string path = SidekickPathBox.Text.Trim();
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            {
+                SidekickStatusLbl.Text = "Select a project folder first.";
+                return;
+            }
+
+            SidekickScanBtn.IsEnabled      = false;
+            SidekickScanBtn.Content        = "⏳  SCANNING...";
+            SidekickGradeBanner.Visibility = Visibility.Collapsed;
+            _sidekickFindings.Clear();
+            SidekickStatusLbl.Text         = "Scanning...";
+
+            try
+            {
+                var options = RevenantHardening.Core.ScanOptions.Default(path);
+                var result  = await Task.Run(() =>
+                    RevenantHardening.Core.RuleEngine.Scan(
+                        RevenantHardening.Rules.RuleRegistry.All, options));
+
+                foreach (var f in result.Findings)
+                    _sidekickFindings.Add(new SidekickFindingVm(f));
+
+                var gradeColor = GradeColor(result.Grade);
+                SidekickGradeLbl.Text             = result.Grade.ToString();
+                SidekickGradeLbl.Foreground        = gradeColor;
+                SidekickScoreLbl.Text             = $"Score: {result.Score}/100";
+                SidekickSummaryLbl.Text           = $"{result.Findings.Count} findings  ·  {result.FilesScanned} files";
+                SidekickGradeBanner.BorderBrush   = gradeColor;
+                SidekickGradeBanner.Visibility    = Visibility.Visible;
+
+                SidekickStatusLbl.Text = $"Done in {result.Duration.TotalSeconds:F1}s  ·  hover a finding for Why/Fix";
+                SidekickFindingsScroller.ScrollToTop();
+            }
+            catch (Exception ex)
+            {
+                SidekickStatusLbl.Text = $"Scan error: {ex.Message}";
+            }
+            finally
+            {
+                SidekickScanBtn.IsEnabled = true;
+                SidekickScanBtn.Content   = "▶  SCAN PROJECT";
+            }
+        }
+
+        private static SolidColorBrush GradeColor(char grade) => grade switch
+        {
+            'A' => new SolidColorBrush(Color.FromRgb(0x3A, 0xD5, 0xA1)),
+            'B' => new SolidColorBrush(Color.FromRgb(0x6B, 0xC4, 0x6B)),
+            'C' => new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00)),
+            'D' => new SolidColorBrush(Color.FromRgb(0xFF, 0xA0, 0x40)),
+            _   => new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x4D)),
+        };
+
+        // =========================================================================
+        // AppData State Cache
+        // =========================================================================
+
+        private void DeferSaveStateCache()
+        {
+            _saveCacheTimer.Stop();
+            _saveCacheTimer.Start();
+        }
+
+        private void LoadStateCache()
+        {
+            var cachePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "RevenantWorkspaceWarden", "workspacestate.json");
+            if (!File.Exists(cachePath)) return;
+            try
+            {
+                using var doc  = JsonDocument.Parse(File.ReadAllText(cachePath));
+                var root = doc.RootElement;
+                if (root.TryGetProperty("workspaceRoot", out var wr) &&
+                    wr.GetString() is string path && Directory.Exists(path))
+                    LoadWorkspaceRoot(path);
+            }
+            catch { }
+        }
+
+        private void SaveStateCache()
+        {
+            try
+            {
+                var cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "RevenantWorkspaceWarden");
+                Directory.CreateDirectory(cacheDir);
+                var state = new { workspaceRoot = _lastWorkspaceRoot };
+                File.WriteAllText(
+                    Path.Combine(cacheDir, "workspacestate.json"),
+                    JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch { }
+        }
+
+        // =========================================================================
+        // COURSE Panel
+        // =========================================================================
+
+        private void CourseBtn_Click(object sender, RoutedEventArgs e)
+        {
+            bool opening = CourseCol.Width.Value == 0;
+            CourseCol.Width   = new GridLength(opening ? 300 : 0);
+            CourseBtn.Content = opening ? "◄ COURSE" : "COURSE ►";
+
+            if (opening)
+            {
+                bool licensed = Providers.LicenseManager.IsActivated;
+                CourseUpsell.Visibility  = licensed ? Visibility.Collapsed : Visibility.Visible;
+                CourseContent.Visibility = licensed ? Visibility.Visible   : Visibility.Collapsed;
+            }
+        }
+
+        private void CourseActivate_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new UI.ActivationWindow { Owner = this };
+            if (win.ShowDialog() == true)
+            {
+                CourseUpsell.Visibility  = Visibility.Collapsed;
+                CourseContent.Visibility = Visibility.Visible;
+                AddSystemMessage("[Pro] Course Mode unlocked. Upload your syllabus and current assignment.");
+            }
+        }
+
+        private void CourseSyllabusUpload_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title  = "Select Syllabus File",
+                Filter = "Text files|*.txt;*.md|All files|*.*"
+            };
+            if (dialog.ShowDialog() != true) return;
+            try
+            {
+                CourseSyllabusBox.Text = File.ReadAllText(dialog.FileName);
+                AddSystemMessage($"[Course] Syllabus loaded from {Path.GetFileName(dialog.FileName)}");
+            }
+            catch (Exception ex)
+            {
+                AddSystemMessage($"[Course] Failed to read file: {ex.Message}");
+            }
+        }
+
+        private void CourseText_Changed(object sender, TextChangedEventArgs e)
+        {
+            _saveCourseCacheTimer.Stop();
+            _saveCourseCacheTimer.Start();
+        }
+
+        private async void CourseAxiomNotes_Click(object sender, RoutedEventArgs e)
+        {
+            string syllabus   = CourseSyllabusBox.Text.Trim();
+            string assignment = CourseAssignmentBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(syllabus) && string.IsNullOrEmpty(assignment))
+            {
+                AddSystemMessage("[Course] Load a syllabus or paste an assignment first.");
+                return;
+            }
+
+            AddUserMessage("[Course] Axiom Notes");
+
+            string prompt = "You are a study assistant. Based on the course material below, produce concise, useful notes:\n" +
+                            "1. Key topics and concepts by unit/week\n" +
+                            "2. Likely difficulty spikes — what to spend extra time on\n" +
+                            "3. Study priority order\n";
+
+            if (!string.IsNullOrEmpty(assignment))
+                prompt += "4. Specific guidance for the current assignment\n";
+
+            prompt += "\n";
+
+            if (!string.IsNullOrEmpty(syllabus))
+                prompt += $"SYLLABUS:\n{syllabus}\n\n";
+
+            if (!string.IsNullOrEmpty(assignment))
+                prompt += $"CURRENT ASSIGNMENT:\n{assignment}";
+
+            await DispatchLlmAsync(prompt);
+        }
+
+        private void CourseClear_Click(object sender, RoutedEventArgs e)
+        {
+            CourseSyllabusBox.Text   = "";
+            CourseAssignmentBox.Text = "";
+            SaveCourseData();
+            AddSystemMessage("[Course] Course data cleared.");
+        }
+
+        private void LoadCourseData()
+        {
+            var cachePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "RevenantWorkspaceWarden", "coursestate.json");
+            if (!File.Exists(cachePath)) return;
+            try
+            {
+                using var doc  = JsonDocument.Parse(File.ReadAllText(cachePath));
+                var root = doc.RootElement;
+                if (root.TryGetProperty("syllabus",   out var s)) CourseSyllabusBox.Text   = s.GetString() ?? "";
+                if (root.TryGetProperty("assignment", out var a)) CourseAssignmentBox.Text = a.GetString() ?? "";
+            }
+            catch { }
+        }
+
+        private void SaveCourseData()
+        {
+            try
+            {
+                var cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "RevenantWorkspaceWarden");
+                Directory.CreateDirectory(cacheDir);
+                var state = new { syllabus = CourseSyllabusBox.Text, assignment = CourseAssignmentBox.Text };
+                File.WriteAllText(
+                    Path.Combine(cacheDir, "coursestate.json"),
+                    JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch { }
+        }
+    }
+
+    // =========================================================================
+    // SidekickFindingVm — view-model wrapper for RWS Finding records
+    // =========================================================================
+
+    internal sealed class SidekickFindingVm
+    {
+        public string RuleId        { get; }
+        public string Title         { get; }
+        public string FileLine      { get; }
+        public string Why           { get; }
+        public string Fix           { get; }
+        public string SeverityLabel { get; }
+        public Brush  SeverityBrush { get; }
+
+        public SidekickFindingVm(RevenantHardening.Core.Models.Finding f)
+        {
+            RuleId        = f.RuleId;
+            Title         = f.Title;
+            FileLine      = f.Line.HasValue ? $"{f.File}:{f.Line}" : f.File;
+            Why           = f.Why;
+            Fix           = f.Fix;
+            SeverityLabel = f.Severity.ToString().ToUpper();
+            SeverityBrush = f.Severity switch
+            {
+                RevenantHardening.Core.Models.Severity.Critical =>
+                    new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x4D)),
+                RevenantHardening.Core.Models.Severity.High =>
+                    new SolidColorBrush(Color.FromRgb(0xFF, 0xA0, 0x40)),
+                RevenantHardening.Core.Models.Severity.Medium =>
+                    new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00)),
+                _ =>
+                    new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)),
+            };
+        }
+    }
+
+    // =========================================================================
+    // FileSystemNode — lazy-loading workspace tree node
+    // =========================================================================
+
+    public class FileSystemNode
+    {
+        public string Name      { get; set; }
+        public string FullPath  { get; set; }
+        public bool   IsDirectory { get; set; }
+        public ObservableCollection<FileSystemNode> Children { get; set; } = new();
+        private bool _loaded;
+
+        public FileSystemNode(string fullPath, bool isDirectory)
+        {
+            FullPath    = fullPath;
+            Name        = System.IO.Path.GetFileName(fullPath);
+            IsDirectory = isDirectory;
+            if (isDirectory)
+                Children.Add(new FileSystemNode("", false) { Name = "..." });
+        }
+
+        public void LoadChildren()
+        {
+            if (_loaded || !IsDirectory) return;
+            _loaded = true;
+            Children.Clear();
+            try
+            {
+                foreach (var dir in Directory.GetDirectories(FullPath))
+                    Children.Add(new FileSystemNode(dir, true));
+                foreach (var file in Directory.GetFiles(FullPath))
+                    Children.Add(new FileSystemNode(file, false));
+            }
+            catch { }
         }
     }
 }

@@ -4,6 +4,28 @@
              xmlns:local="clr-namespace:RevenantWorkspaceWarden"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+
+        <!-- ── Base window color (solid dark, behind circuits) ────────────── -->
+        <SolidColorBrush x:Key="BgApp"       Color="#080C12"/>
+
+        <!-- ── Panel backgrounds — semi-transparent so circuits show through  -->
+        <!-- Format: #AARRGGBB  AA=alpha, RRGGBB=color                       -->
+        <SolidColorBrush x:Key="BgSurface"   Color="#CC1C2330"/>  <!-- 80% opacity — sidebar / panels -->
+        <SolidColorBrush x:Key="BgPanel"     Color="#B512161C"/>  <!-- 71% opacity — editor / deepest -->
+        <SolidColorBrush x:Key="BgStatusBar" Color="#DD1A2D42"/>  <!-- 87% opacity — status strip -->
+
+        <!-- ── Gunmetal blue accents ─────────────────────────────────────── -->
+        <SolidColorBrush x:Key="Gold"         Color="#DFBE81"/>   <!-- Revenant gold -->
+        <SolidColorBrush x:Key="GoldDim"      Color="#2A4A62"/>
+        <SolidColorBrush x:Key="BorderColor"  Color="#2D3748"/>
+        <SolidColorBrush x:Key="BorderGold"   Color="#1A2A3A"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="#CDD4DE"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="#5B6B7A"/>
+        <SolidColorBrush x:Key="TextCode"     Color="#A8B5C8"/>
+
+        <!-- ── Ghost Theory fonts (TTF already in Assets\) ────────────────── -->
+        <FontFamily x:Key="GhostFont">pack://application:,,,/Assets/#Ghost theory 1</FontFamily>
+        <FontFamily x:Key="GhostFont2">pack://application:,,,/Assets/#Ghost theory 2</FontFamily>
+
     </Application.Resources>
 </Application>

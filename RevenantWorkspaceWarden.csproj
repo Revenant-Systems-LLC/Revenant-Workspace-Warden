@@ -25,4 +25,9 @@
     <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantHardening.Core\RevenantHardening.Core.csproj" />
+    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantHardening.Rules\RevenantHardening.Rules.csproj" />
+  </ItemGroup>
+
 </Project>

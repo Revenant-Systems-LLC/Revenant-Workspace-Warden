@@ -11,8 +11,6 @@ namespace RevenantWorkspaceWarden.UI
         // Set this to your Stripe Payment Link once the product is live.
         private const string StoreUrl = "https://revenantsystems.net/warden-pro";
 
-        public bool Activated { get; private set; } = false;
-
         public ActivationWindow()
         {
             InitializeComponent();
@@ -32,7 +30,6 @@ namespace RevenantWorkspaceWarden.UI
 
             if (valid)
             {
-                Activated          = true;
                 StatusText.Foreground = new SolidColorBrush(
                     (Color)ColorConverter.ConvertFromString("#3ad5a1"));
                 StatusText.Text    = "Workspace Warden Pro activated.";

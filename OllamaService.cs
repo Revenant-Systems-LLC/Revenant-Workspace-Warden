@@ -82,6 +82,8 @@ namespace RevenantWorkspaceWarden
 
         public async Task LoadModelsAsync(Action<string> addModelCallback)
         {
+            // Note: resilience lives in the provider — OllamaProvider.GetAvailableModelsAsync
+            // already retries 3× with a 2s backoff, which covers a cold `ollama serve` boot.
             var provider = GetCurrentProvider();
             var models = await provider.GetAvailableModelsAsync();
             foreach (var model in models)

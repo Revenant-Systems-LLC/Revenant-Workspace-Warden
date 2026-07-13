@@ -35,13 +35,25 @@ namespace RevenantWorkspaceWarden.Providers
 
     internal static class SecretsManager
     {
-        private static readonly string SettingsFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
         private static readonly string CredentialsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RevenantWarden");
+        private static readonly string SettingsFile = Path.Combine(CredentialsDir, "settings.json");
+        // Older builds stored settings next to the .exe, which silently fails to persist when the
+        // app runs from a protected location (e.g. Program Files). Kept only to migrate once.
+        private static readonly string LegacySettingsFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
 
         public static AppConfig LoadConfig()
         {
             try
             {
+                Directory.CreateDirectory(CredentialsDir);
+
+                // One-time migration: pull settings from the legacy exe-directory location into
+                // AppData so they persist regardless of where the app is installed.
+                if (!File.Exists(SettingsFile) && File.Exists(LegacySettingsFile))
+                {
+                    try { File.Copy(LegacySettingsFile, SettingsFile); } catch { /* best effort */ }
+                }
+
                 if (File.Exists(SettingsFile))
                 {
                     string json = File.ReadAllText(SettingsFile);
@@ -57,6 +69,7 @@ namespace RevenantWorkspaceWarden.Providers
         {
             try
             {
+                Directory.CreateDirectory(CredentialsDir);
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsFile, json);
             }

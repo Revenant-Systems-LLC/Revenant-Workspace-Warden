@@ -31,6 +31,7 @@ namespace RevenantWorkspaceWarden
         void SetLoadingState(bool isLoading);
         void ScrollToBottom();
         void SetTutorModeChecked(bool isChecked);
+        void SetQuizModeChecked(bool isChecked);
 
         /// <summary>
         /// Marshals an action onto the UI thread synchronously.
@@ -48,6 +49,7 @@ namespace RevenantWorkspaceWarden
 
         // ── Application State ────────────────────────────────────────────────────
         bool IsTutorMode { get; set; }
+        bool IsQuizMode { get; set; }
 
         /// <summary>
         /// The last text the user copied (Ctrl+Alt+C) or attached via the file picker.
