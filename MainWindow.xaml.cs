@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,6 +43,7 @@ namespace RevenantWorkspaceWarden
         private IntPtr _windowHandle;
         private HwndSource? _source;
         private readonly ObservableCollection<MessageItem> _messages = new();
+        private CancellationTokenSource? _activeGeneration; // in-flight LLM generation; Stop button cancels it
 
         // ── Services ──────────────────────────────────────────────────────────────
         private OllamaService       _ollamaService      = null!;
@@ -79,6 +81,18 @@ namespace RevenantWorkspaceWarden
         // Constructor
         // =========================================================================
 
+        // DWM window attributes: paint the title bar in dark mode with the house
+        // colors. Without this Windows draws the caption in the user's accent
+        // color, which on a fully obsidian app renders as an olive bar across the
+        // top and makes the theme look like it stops at the frame.
+        // Ported from Sidekick 2026-08-03 so the pair match at the frame too.
+        private const int DwmwaUseImmersiveDarkMode = 20;
+        private const int DwmwaBorderColor          = 34;
+        private const int DwmwaCaptionColor         = 35;
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int value, int size);
+
         public MainWindow()
         {
             InitializeComponent();
@@ -89,7 +103,29 @@ namespace RevenantWorkspaceWarden
             _ocrService         = new OcrService(this);
             _chatSessionManager = new ChatSessionManager(this);
 
+            SourceInitialized += ApplyDarkCaption;
+
             AddSystemMessage("Revenant Workspace Warden initialized. Alt+Enter to hide.");
+        }
+
+        private void ApplyDarkCaption(object? sender, EventArgs e)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == 0)
+                return;
+
+            // Best effort only. Older Windows builds return a failure HRESULT, in
+            // which case the caption just stays default and nothing else breaks.
+            var enabled = 1;
+            DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref enabled, sizeof(int));
+
+            // COLORREF is 0x00BBGGRR, NOT RGB. Obsidian #050506 -> 0x00060505.
+            var caption = 0x00060505;
+            DwmSetWindowAttribute(hwnd, DwmwaCaptionColor, ref caption, sizeof(int));
+
+            // Gold hairline frame, #7A633E -> 0x003E637A.
+            var border = 0x003E637A;
+            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref border, sizeof(int));
         }
 
         // =========================================================================
@@ -541,11 +577,21 @@ namespace RevenantWorkspaceWarden
         public async Task<string?> DispatchLlmAsync(
             string prompt, bool forceTutor = false, string? lessonContext = null)
         {
+            // Cancel any generation still in flight, then own a fresh token for this one.
+            _activeGeneration?.Cancel();
+            var cts = new CancellationTokenSource();
+            _activeGeneration = cts;
             try
             {
-                string? aiResponse = await _ollamaService.SendToProviderAsync(prompt, lessonContext);
+                string? aiResponse = await _ollamaService.SendToProviderAsync(prompt, lessonContext, cts.Token);
                 SetWardenState(false); // Success -> Sage Gold
                 return aiResponse;
+            }
+            catch (OperationCanceledException)
+            {
+                // User hit Stop — a clean halt, not an error. No Rage state.
+                AddSystemMessage("[Warden] Stopped.");
+                return null;
             }
             catch (Exception ex)
             {
@@ -553,7 +599,16 @@ namespace RevenantWorkspaceWarden
                 AddSystemMessage($"[Warden Error]: {ex.Message}");
                 return null;
             }
+            finally
+            {
+                // Only clear the field if a newer dispatch hasn't already replaced it.
+                if (ReferenceEquals(_activeGeneration, cts)) _activeGeneration = null;
+                cts.Dispose();
+                SetLoadingState(false); // safety net — providers normally handle this
+            }
         }
+
+        private void StopGeneration_Click(object sender, RoutedEventArgs e) => _activeGeneration?.Cancel();
 
         // =========================================================================
         // Hotkey / Window Message Pump
@@ -1192,10 +1247,10 @@ namespace RevenantWorkspaceWarden
 
             try
             {
-                var options = RevenantHardening.Core.ScanOptions.Default(path);
+                var options = RevenantWorkspaceSidekick.Core.ScanOptions.Default(path);
                 var result  = await Task.Run(() =>
-                    RevenantHardening.Core.RuleEngine.Scan(
-                        RevenantHardening.Rules.RuleRegistry.All, options));
+                    RevenantWorkspaceSidekick.Core.RuleEngine.Scan(
+                        RevenantWorkspaceSidekick.Rules.RuleRegistry.All, options));
 
                 foreach (var f in result.Findings)
                     _sidekickFindings.Add(new SidekickFindingVm(f));
@@ -1415,7 +1470,7 @@ namespace RevenantWorkspaceWarden
         public string SeverityLabel { get; }
         public Brush  SeverityBrush { get; }
 
-        public SidekickFindingVm(RevenantHardening.Core.Models.Finding f)
+        public SidekickFindingVm(RevenantWorkspaceSidekick.Core.Models.Finding f)
         {
             RuleId        = f.RuleId;
             Title         = f.Title;
@@ -1423,16 +1478,32 @@ namespace RevenantWorkspaceWarden
             Why           = f.Why;
             Fix           = f.Fix;
             SeverityLabel = f.Severity.ToString().ToUpper();
+            // Revenant house severity ramp, set by Dave 2026-07-30. Five levels,
+            // five colors: light blue, yellow, orange, red, deep crimson. Matches
+            // Sidekick's Theme/RevenantTheme.xaml, its SeverityBrushes.cs, and the
+            // HtmlReporter in Sidekick.Core that this project already references — so
+            // a finding reads the same color in Warden, in Sidekick, and in a report.
+            //
+            // Before this, Warden ran its own palette (#FF4D4D / #FFA040 / #FFD700)
+            // and collapsed BOTH Low and Info into grey. They are distinct now.
+            //
+            // ⚠ The XAML paints this brush as a SOLID badge fill with black 9px text
+            // on it, and Critical #8C1436 measures about 2.3:1 against black — well
+            // under the 4.5 AA line and effectively unreadable at that size. Left as
+            // is on purpose: the Warden UI revamp is the next piece of work and will
+            // replace this badge treatment wholesale. Fix it there, not here.
             SeverityBrush = f.Severity switch
             {
-                RevenantHardening.Core.Models.Severity.Critical =>
-                    new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x4D)),
-                RevenantHardening.Core.Models.Severity.High =>
-                    new SolidColorBrush(Color.FromRgb(0xFF, 0xA0, 0x40)),
-                RevenantHardening.Core.Models.Severity.Medium =>
-                    new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00)),
+                RevenantWorkspaceSidekick.Core.Models.Severity.Critical =>
+                    new SolidColorBrush(Color.FromRgb(0x8C, 0x14, 0x36)),   // deep crimson
+                RevenantWorkspaceSidekick.Core.Models.Severity.High =>
+                    new SolidColorBrush(Color.FromRgb(0xDA, 0x2B, 0x26)),   // red
+                RevenantWorkspaceSidekick.Core.Models.Severity.Medium =>
+                    new SolidColorBrush(Color.FromRgb(0xF5, 0x9A, 0x20)),   // orange
+                RevenantWorkspaceSidekick.Core.Models.Severity.Low =>
+                    new SolidColorBrush(Color.FromRgb(0xF0, 0xDE, 0x1B)),   // yellow
                 _ =>
-                    new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)),
+                    new SolidColorBrush(Color.FromRgb(0x7F, 0xA6, 0xC9)),   // light blue (Info)
             };
         }
     }

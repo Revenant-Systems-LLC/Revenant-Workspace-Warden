@@ -10,13 +10,43 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\RWW_SAGEGOLD.ico</ApplicationIcon>
+
+    <!-- Ship metadata -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>Revenant Workspace Warden</Product>
+    <AssemblyTitle>Revenant Workspace Warden</AssemblyTitle>
+    <Company>Revenant Systems LLC</Company>
+    <Authors>Revenant Systems LLC</Authors>
+    <Copyright>Copyright © 2026 Revenant Systems LLC</Copyright>
+    <Description>Floating AI coding companion for Windows: tutor, quiz, screen OCR, and a built-in security scanner.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="Assets\**">
+    <!-- Only the assets the app references at runtime ship loose. BACKGROUND.mp4 and the
+         alt marks/fonts (~48 MB) stay in the repo but out of the build output. -->
+    <None Update="Assets\Circuits.png;Assets\RWW_SAGEGOLD.ico;Assets\RWW_RAGE.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+
+    <!-- ⚠ FONTS MUST BE <Resource>, NOT <None>. The theme loads them with
+         pack://application:,,,/Assets/#Family, and the pack scheme reads
+         EMBEDDED resources — it cannot see a loose file sitting next to the exe.
+
+         Ghost Theory was declared <None> with CopyToOutputDirectory until
+         2026-08-03, so all 10 GhostFont usages in MainWindow.xaml had been
+         silently falling back to a default face. Nothing errored; it just was
+         not the font. The reference was wrong twice over — App.xaml also asked
+         for "#Ghost theory 1", which is the FILENAME. The family name inside
+         the file is "Ghost Theory".
+
+         Ghost Theory 2 is no longer referenced at all (retired at Dave's call)
+         so it is deliberately absent from both lists. The file stays in Assets. -->
     <Resource Include="Assets\Street Reich.otf" />
+    <Resource Include="Assets\Sell Your Soul.ttf" />
+    <Resource Include="Assets\Ghost theory 1.ttf" />
+    <Resource Include="Assets\tex-circuit-wide.jpg" />
     <Resource Include="Assets\RWW_SAGEGOLD.ico" />
     <Resource Include="Assets\RWW_RAGE.ico" />
   </ItemGroup>
@@ -26,8 +56,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantHardening.Core\RevenantHardening.Core.csproj" />
-    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantHardening.Rules\RevenantHardening.Rules.csproj" />
+    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantWorkspaceSidekick.Core\RevenantWorkspaceSidekick.Core.csproj" />
+    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantWorkspaceSidekick.Rules\RevenantWorkspaceSidekick.Rules.csproj" />
   </ItemGroup>
 
 </Project>

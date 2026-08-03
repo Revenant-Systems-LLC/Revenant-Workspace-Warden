@@ -4,28 +4,42 @@
              xmlns:local="clr-namespace:RevenantWorkspaceWarden"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Revenant house theme, Warden's variant. Same keys, same
+                     obsidian and gold ramps as Sidekick; turquoise pulled out of
+                     the chrome. Read the header of that file before changing a
+                     color — some values are shared with Sidekick and some are
+                     deliberately not.
 
-        <!-- ── Base window color (solid dark, behind circuits) ────────────── -->
-        <SolidColorBrush x:Key="BgApp"       Color="#080C12"/>
+                     ══ WHAT THIS REPLACED, 2026-08-03 ═══════════════════════
+                     A local 11-brush palette that lived here. It was navy, not
+                     black, despite the naming:
 
-        <!-- ── Panel backgrounds — semi-transparent so circuits show through  -->
-        <!-- Format: #AARRGGBB  AA=alpha, RRGGBB=color                       -->
-        <SolidColorBrush x:Key="BgSurface"   Color="#CC1C2330"/>  <!-- 80% opacity — sidebar / panels -->
-        <SolidColorBrush x:Key="BgPanel"     Color="#B512161C"/>  <!-- 71% opacity — editor / deepest -->
-        <SolidColorBrush x:Key="BgStatusBar" Color="#DD1A2D42"/>  <!-- 87% opacity — status strip -->
+                         BgApp       #080C12   blue channel 10 over red
+                         BgSurface   #1C2330   blue channel 20 over red
+                         BgStatusBar #1A2D42   blue channel 40 over red
 
-        <!-- ── Gunmetal blue accents ─────────────────────────────────────── -->
-        <SolidColorBrush x:Key="Gold"         Color="#DFBE81"/>   <!-- Revenant gold -->
-        <SolidColorBrush x:Key="GoldDim"      Color="#2A4A62"/>
-        <SolidColorBrush x:Key="BorderColor"  Color="#2D3748"/>
-        <SolidColorBrush x:Key="BorderGold"   Color="#1A2A3A"/>
-        <SolidColorBrush x:Key="TextPrimary"  Color="#CDD4DE"/>
-        <SolidColorBrush x:Key="TextMuted"    Color="#5B6B7A"/>
-        <SolidColorBrush x:Key="TextCode"     Color="#A8B5C8"/>
+                     Two of its brushes were named for a colour they did not
+                     contain — GoldDim was #2A4A62 and BorderGold was #1A2A3A,
+                     both navy. Every structural line in the app was drawn by a
+                     brush called "BorderGold" that had no gold in it. Its own
+                     section comment said "Gunmetal blue accents," so this was
+                     known at the time and just never revisited.
 
-        <!-- ── Ghost Theory fonts (TTF already in Assets\) ────────────────── -->
-        <FontFamily x:Key="GhostFont">pack://application:,,,/Assets/#Ghost theory 1</FontFamily>
-        <FontFamily x:Key="GhostFont2">pack://application:,,,/Assets/#Ghost theory 2</FontFamily>
+                     The theme's obsidian is genuinely neutral (#050506 has one
+                     point of blue over red) and BorderGold is #59DFBE81, real
+                     gold at 35 percent.
 
+                     Also dropped, both unreferenced anywhere in the app:
+                       · GoldDim      — the navy above
+                       · GhostFont2   — Ghost Theory 2, retired at Dave's call
+
+                     Every remaining key MainWindow.xaml uses is provided by the
+                     theme. Verified by inventorying all 15 StaticResource
+                     references before the swap; nothing dangles.        -->
+                <ResourceDictionary Source="Theme/RevenantTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,0 +1,587 @@
+<!--
+    ══════════════════════════════════════════════════════════════════════
+    REVENANT HOUSE THEME — Obsidian / Gold / Turquoise
+    ══════════════════════════════════════════════════════════════════════
+
+    ⚠ THIS IS WARDEN'S VARIANT. It is NOT identical to Sidekick's copy and is
+    not meant to be. Dave, 2026-08-03: Warden leans black and gold, with less
+    turquoise than Sidekick — "not only be black and gold," but weighted there.
+
+    What is IDENTICAL, and must stay identical — this is what makes the two read
+    as a matched pair rather than two apps that happen to share a palette:
+
+        · every resource KEY name
+        · the obsidian ramp        #050506 · #0A0B0D · #12141A · #1A1D24
+        · the gold ramp            #EDCF92 · #DFBE81 · #7A633E
+        · the turquoise values     #7FD2D9 · #3EC2C7 · #239190
+        · the five severity colors and the text colors
+
+    What DIFFERS here, deliberately: turquoise no longer does structural work.
+    In Sidekick it draws the progress bar, the selected row, and every input
+    hover border. Here those are gold. Turquoise is kept for the places it earns
+    — text selection, where gold on gold would be unreadable, and liveness
+    indicators, which should read cool against a gold interface.
+
+    So: same bones, different weighting. If you change a COLOR VALUE, change it
+    in Sidekick too. If you change which color a CONTROL uses, that is a
+    per-product decision and does not propagate.
+
+    Palette was sampled from Dave's obsidian inlay wordmarks (three images,
+    agreeing) rather than eyeballed. Gold #DFBE81 is unchanged from Warden's
+    original App.xaml token — it landed exactly between the new inlay's
+    highlight and mid tones. Turquoise replaces Warden's old GoldDim #2A4A62
+    as the cool accent.
+
+    Font resource keys (GhostFont / GhostFont2) and the pack:// form match
+    Warden's App.xaml exactly, so both apps resolve them the same way. Both
+    apps must carry the TTFs at Assets\ as <Resource> items.
+
+    IF YOU CHANGE A COLOR HERE, CHANGE IT IN THE OTHER APP TOO. This file is
+    the design contract between the pair.
+    ══════════════════════════════════════════════════════════════════════
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ══ FONTS ══════════════════════════════════════════════════════ -->
+    <!-- Family names verified against the TTF name tables (nameID 1), not
+         guessed from filenames: "Ghost Theory" and "Ghost Theory 2". -->
+    <!-- TitleFont  = Street Reich   — window title, section headers, wordmark
+         BodyFont   = Sell Your Soul — regular UI text
+         BodyAltFont= Ghost Theory   — secondary body text
+         CodeFont   = Consolas       — file paths and rule IDs only, where
+                                       character-level legibility is the job -->
+    <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/#Street Reich</FontFamily>
+    <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/#Sell Your Soul</FontFamily>
+    <FontFamily x:Key="BodyAltFont">pack://application:,,,/Assets/#Ghost Theory</FontFamily>
+    <FontFamily x:Key="CodeFont">Consolas</FontFamily>
+
+    <!-- ⚠⚠ SELL YOUR SOUL HAS NO NUMBERS AND NO PUNCTUATION. Confirmed by Dave,
+         2026-07-30. It is a letterforms-only display face: digits, apostrophes,
+         periods, commas and parentheses are all absent, and WPF renders them as
+         nothing at all rather than falling back to another font.
+
+         What that looked like in the shipped window before it was caught: the
+         status line read "Scan complete    finding s", the roast verdict read
+         "This isn t a security audit", and SCORE showed no number.
+
+         SO: Sell Your Soul is for ALL-CAPS, LETTERS-ONLY LABELS ONLY. Anything
+         that can contain a digit or a mark of punctuation — body copy, the status
+         line, the verdict, counts, scores, timings — uses TextFont below.
+
+         Before putting Sell Your Soul on anything new, read the string. If it has
+         so much as a period in it, that character disappears silently.
+
+         Coverage measured 2026-07-30 by rendering each glyph and checking whether
+         the geometry is empty. The font's own character table is NOT reliable for
+         this — it claimed Sell Your Soul had periods, and it claimed Ghost Theory
+         did not. Both were wrong. Render it and look at the bounds.
+
+             Ghost Theory      draws everything probed: 0-9 . , : / ( ) ' - %
+             Sell Your Soul    draws NONE of: 0 1 5 9 : . , / ( ) ' - %
+             Street Reich      draws none of: ( ) ' - %   (digits and . , : / ok)
+
+         Street Reich is only on REVENANT SYSTEMS LLC, which is letters. Fine. -->
+    <FontFamily x:Key="TextFont">pack://application:,,,/Assets/#Ghost Theory</FontFamily>
+
+    <!-- Back-compat alias so nothing breaks if an old key is still referenced. -->
+    <FontFamily x:Key="UiFont">pack://application:,,,/Assets/#Sell Your Soul</FontFamily>
+    <FontFamily x:Key="GhostFont">pack://application:,,,/Assets/#Ghost Theory</FontFamily>
+
+    <!-- ══ OBSIDIAN — the base stone ══════════════════════════════════ -->
+    <Color x:Key="ObsidianBlackColor">#050506</Color>
+    <Color x:Key="ObsidianDeepColor">#0A0B0D</Color>
+    <Color x:Key="ObsidianSurfaceColor">#12141A</Color>
+    <Color x:Key="ObsidianRaisedColor">#1A1D24</Color>
+
+    <SolidColorBrush x:Key="BgApp"     Color="{StaticResource ObsidianBlackColor}"/>
+    <SolidColorBrush x:Key="BgDeep"    Color="{StaticResource ObsidianDeepColor}"/>
+
+    <!-- Panels carry real alpha so the circuit texture reads through them.
+         This translucency IS the look — flattening these to opaque hex is
+         what makes the app look like a generic dark theme. -->
+    <!-- Panels: near-black at 92%. Was #CC12141A — 80%, and a blue-grey rather
+         than a black. Dave, 2026-07-30, after trying textured card backs and
+         pulling them: "let's try less transparent black." Text sits on these, and
+         the background was reading through hard enough to fight it. -->
+    <SolidColorBrush x:Key="BgSurface"   Color="#EB08090C"/>  <!-- 92% — panels, cards -->
+    <SolidColorBrush x:Key="BgPanel"     Color="#B50A0B0D"/>  <!-- 71% — deepest wells -->
+    <SolidColorBrush x:Key="BgRaised"    Color="#D91A1D24"/>  <!-- 85% — raised cards -->
+    <SolidColorBrush x:Key="BgStatusBar" Color="#DD0E1016"/>  <!-- 87% — status strip -->
+    <SolidColorBrush x:Key="BgInput"     Color="#CC080A0E"/>  <!-- text inputs -->
+
+    <!-- ══ GOLD — the inlay veining ═══════════════════════════════════ -->
+    <Color x:Key="GoldBrightColor">#EDCF92</Color>
+    <Color x:Key="GoldColor">#DFBE81</Color>
+    <Color x:Key="GoldDeepColor">#7A633E</Color>
+
+    <SolidColorBrush x:Key="Gold"       Color="{StaticResource GoldColor}"/>
+    <SolidColorBrush x:Key="GoldBright" Color="{StaticResource GoldBrightColor}"/>
+    <SolidColorBrush x:Key="GoldDeep"   Color="{StaticResource GoldDeepColor}"/>
+    <SolidColorBrush x:Key="GoldFaint"  Color="#33DFBE81"/>
+    <SolidColorBrush x:Key="GoldGlow"   Color="#1FDFBE81"/>
+
+    <LinearGradientBrush x:Key="GoldGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource GoldBrightColor}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource GoldColor}"       Offset="0.55"/>
+        <GradientStop Color="{StaticResource GoldDeepColor}"   Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- Hairline gold rule, for band edges -->
+    <LinearGradientBrush x:Key="GoldRule" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#00DFBE81" Offset="0.0"/>
+        <GradientStop Color="{StaticResource GoldColor}" Offset="0.5"/>
+        <GradientStop Color="#00DFBE81" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- ══ TURQUOISE — the stone inlay ═══════════════════════════════ -->
+    <Color x:Key="TurquoiseBrightColor">#7FD2D9</Color>
+    <Color x:Key="TurquoiseColor">#3EC2C7</Color>
+    <Color x:Key="TurquoiseDeepColor">#239190</Color>
+
+    <SolidColorBrush x:Key="Turquoise"       Color="{StaticResource TurquoiseColor}"/>
+    <SolidColorBrush x:Key="TurquoiseBright" Color="{StaticResource TurquoiseBrightColor}"/>
+    <SolidColorBrush x:Key="TurquoiseDeep"   Color="{StaticResource TurquoiseDeepColor}"/>
+    <SolidColorBrush x:Key="TurquoiseFaint"  Color="#333EC2C7"/>
+
+    <LinearGradientBrush x:Key="TurquoiseGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource TurquoiseBrightColor}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource TurquoiseColor}"       Offset="0.55"/>
+        <GradientStop Color="{StaticResource TurquoiseDeepColor}"   Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- ══ BORDERS ════════════════════════════════════════════════════ -->
+    <SolidColorBrush x:Key="BorderColor"     Color="#2D3748"/>
+    <SolidColorBrush x:Key="BorderSubtle"    Color="#1A2A3A"/>
+    <SolidColorBrush x:Key="BorderGold"      Color="#59DFBE81"/>
+    <SolidColorBrush x:Key="BorderTurquoise" Color="#593EC2C7"/>
+
+    <!-- ══ TEXT ═══════════════════════════════════════════════════════ -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#CDD4DE"/>
+    <SolidColorBrush x:Key="TextCode"    Color="#A8B5C8"/>
+    <SolidColorBrush x:Key="TextMuted"   Color="#5B6B7A"/>
+    <SolidColorBrush x:Key="TextOnGold"  Color="#050506"/>
+
+    <!-- ══ SEVERITY / GRADE ═══════════════════════════════════════════
+         Set by Dave 2026-07-30 from a colour sketch drawn straight over a
+         screenshot of the running app:
+
+             Info      light blue    #7FA6C9
+             Low       yellow        #F0DE1B
+             Medium    orange        #F59A20
+             High      red           #DA2B26
+             Critical  deep crimson  #8C1436
+
+         A pure heat ramp — yellow, orange, red — and then Critical goes DOWN into
+         crimson rather than further up. Critical is the only value that gets
+         darker instead of hotter, which is what tells it apart from High at a
+         glance rather than by hue alone.
+
+         Earlier passes ran teal Low and purple Critical. Both were replaced by
+         the sketch above. Do not reconstruct them.
+
+         Same values live in SeverityBrushes.cs and HtmlReporter.Css(), so a
+         finding reads identically on screen and in an exported report. Three
+         places, one palette — change all three.
+
+         ⚠ Critical #8C1436 is dark on purpose and measures roughly 2:1 against
+         obsidian. Fine as a fill, a border or a chip, which is all it is used for.
+         Do not put small text in it on the app background.                    -->
+    <SolidColorBrush x:Key="SevCritical" Color="#8C1436"/>
+    <SolidColorBrush x:Key="SevHigh"     Color="#DA2B26"/>
+    <SolidColorBrush x:Key="SevMedium"   Color="#F59A20"/>
+    <SolidColorBrush x:Key="SevLow"      Color="#F0DE1B"/>
+    <SolidColorBrush x:Key="SevInfo"     Color="#7FA6C9"/>
+    <SolidColorBrush x:Key="Jade"        Color="#3AD5A1"/>
+
+    <SolidColorBrush x:Key="SevCriticalWash" Color="#268C1436"/>
+    <SolidColorBrush x:Key="SevHighWash"     Color="#26DA2B26"/>
+    <SolidColorBrush x:Key="SevMediumWash"   Color="#26F59A20"/>
+    <SolidColorBrush x:Key="SevLowWash"      Color="#26F0DE1B"/>
+    <SolidColorBrush x:Key="SevInfoWash"     Color="#267FA6C9"/>
+
+    <!-- Brighter fills for the selected/active state of a severity card. -->
+    <SolidColorBrush x:Key="SevCriticalActive" Color="#598C1436"/>
+    <SolidColorBrush x:Key="SevHighActive"     Color="#59DA2B26"/>
+    <SolidColorBrush x:Key="SevMediumActive"   Color="#59F59A20"/>
+    <SolidColorBrush x:Key="SevLowActive"      Color="#59F0DE1B"/>
+    <SolidColorBrush x:Key="SevInfoActive"     Color="#597FA6C9"/>
+
+    <!-- ══ TYPE STYLES ════════════════════════════════════════════════ -->
+    <Style x:Key="Wordmark" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource GhostFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource GoldGradient}"/>
+        <Setter Property="FontSize" Value="40"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+    </Style>
+
+    <Style x:Key="SubWordmark" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource GhostFont2}"/>
+        <Setter Property="Foreground" Value="{StaticResource Turquoise}"/>
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+    </Style>
+
+    <!-- ⚠ These are Sell Your Soul, NOT Street Reich, and that is deliberate.
+         Street Reich is reserved for exactly two pieces of text in the whole app:
+         SECURITY AUDIT in the header band, and REVENANT SYSTEMS in the footer.
+         Both set it inline. Dave, 2026-07-30, after seeing it applied to every
+         section label: "these shouldn't be Street Reich, only these two."
+         Do not promote it back into these shared styles.
+
+         Sizes stay up from the original 9 and 10 — that part was never the
+         problem with the font, 9px was just too small. Eyebrow was GoldDeep
+         #7A633E, about 3.6:1 on obsidian, under the line for text this size.
+         Gold measures about 11:1. -->
+    <Style x:Key="Eyebrow" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource Gold}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="SectionLabel" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource Gold}"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
+    </Style>
+
+    <!-- Base text. Bold by default — Sell Your Soul is a thin display face and at
+         UI sizes its strokes drop out; the letters literally lose pieces. WPF has
+         no real bold for it (the TTF ships one face) so this is a synthesized
+         bold, which is exactly what it is for.
+
+         ⚠ NO FontSize SETTER HERE, DELIBERATELY. There used to be one, at 12, and
+         it was silently overriding every control in the app: when a Button or
+         CheckBox has a plain string as content, WPF generates a TextBlock for it,
+         this implicit style lands on that TextBlock, and a style setter outranks
+         the value inherited from the control. So setting FontSize on a Button did
+         nothing at all. Without the setter, text inherits from its container and
+         control font sizes work the way you'd expect. -->
+    <Style TargetType="TextBlock">
+        <!-- Sell Your Soul stays the default look. Anything that can contain a
+             digit or a punctuation mark sets FontFamily="{StaticResource TextFont}"
+             on itself instead — see the font block at the top of this file. -->
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <!-- ══ BUTTON ═════════════════════════════════════════════════════ -->
+    <!-- 14, not 12. Sell Your Soul is a thin display face and at 12 its stems
+         start dropping out on control labels — "Browse", "Roast", "Student mode"
+         lose pieces of letters. SCAN reads fine at the same size only because
+         PrimaryButton is bold on a gold fill. PrimaryButton inherits this size. -->
+    <Style TargetType="Button">
+        <Setter Property="Foreground" Value="{StaticResource Gold}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <!-- ⚠ 4,2 here, NOT Sidekick's 14,6. Warden's buttons are small chrome
+             buttons with hard-coded Width and Height — the window controls are
+             26px square, and 14px of horizontal padding per side wants 28px on
+             its own, so their glyphs clipped to nothing the moment this style
+             started applying. Eleven buttons carry a fixed Width in
+             MainWindow.xaml; six of them are too narrow for Sidekick's padding.
+
+             Sidekick's buttons are roomy text buttons that size to content, so
+             14,6 is right there and wrong here. A button that wants breathing
+             room sets its own Padding. -->
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="Margin" Value="3,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd"
+                            Background="{StaticResource BgRaised}"
+                            BorderBrush="{StaticResource BorderGold}"
+                            BorderThickness="1"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource GoldGlow}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}"/>
+                            <Setter Property="Foreground" Value="{StaticResource GoldBright}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource GoldFaint}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource BorderSubtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Primary action: solid gold, obsidian text -->
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Foreground" Value="{StaticResource TextOnGold}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="26,7"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd"
+                            Background="{StaticResource GoldGradient}"
+                            BorderBrush="{StaticResource GoldBright}"
+                            BorderThickness="1"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource GoldBright}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource GoldDeep}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource BgRaised}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource BorderSubtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ TEXTBOX ════════════════════════════════════════════════════ -->
+    <Style TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource BgInput}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource Gold}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource Turquoise}"/>
+        <Setter Property="FontFamily" Value="{StaticResource CodeFont}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <!-- TextBox draws its own text rather than going through a TextBlock, so
+             it does not pick up the base style's weight. Set it here. Consolas
+             has a real bold face, unlike the display fonts. -->
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="2">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource BorderGold}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ CHECKBOX ═══════════════════════════════════════════════════ -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource TextCode}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="box" Width="14" Height="14"
+                                Background="{StaticResource BgInput}"
+                                BorderBrush="{StaticResource BorderColor}"
+                                BorderThickness="1" CornerRadius="2"
+                                VerticalAlignment="Center">
+                            <Path x:Name="check" Stretch="Uniform" Margin="2"
+                                  Data="M 0,5 L 3.5,8.5 L 9,1"
+                                  Stroke="{StaticResource Gold}" StrokeThickness="2"
+                                  Visibility="Collapsed"/>
+                        </Border>
+                        <ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource Gold}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource BorderGold}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ COMBOBOX ═══════════════════════════════════════════════════ -->
+    <Style x:Key="DarkComboBoxItemStyle" TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource GoldFaint}"/>
+                            <Setter Property="Foreground" Value="{StaticResource GoldBright}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ComboBox">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItemStyle}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="tb" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="bd" Background="{StaticResource BgInput}"
+                                            BorderBrush="{StaticResource BorderColor}"
+                                            BorderThickness="1" CornerRadius="2">
+                                        <Path HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Margin="0,0,8,0" Data="M 0,0 L 8,0 L 4,5 Z"
+                                              Fill="{StaticResource Gold}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                          Margin="9,0,24,0" VerticalAlignment="Center"
+                                          IsHitTestVisible="False"/>
+                        <Popup AllowsTransparency="True" Placement="Bottom" Focusable="False"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               PopupAnimation="Fade">
+                            <Border Background="#F20A0B0D"
+                                    BorderBrush="{StaticResource BorderGold}"
+                                    BorderThickness="1" CornerRadius="2"
+                                    MinWidth="{TemplateBinding ActualWidth}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                <ScrollViewer>
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ PROGRESSBAR ════════════════════════════════════════════════ -->
+    <Style TargetType="ProgressBar">
+        <Setter Property="Background" Value="{StaticResource BgInput}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <!-- Gold, not turquoise. Sidekick's progress bar is the single largest
+             turquoise element on its screen; here the bar is gold and turquoise
+             stays out of the chrome. -->
+        <Setter Property="Foreground" Value="{StaticResource GoldGradient}"/>
+    </Style>
+
+    <!-- ══ DATAGRID ═══════════════════════════════════════════════════ -->
+    <Style TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="#CC0E1016"/>
+        <Setter Property="Foreground" Value="{StaticResource Gold}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    </Style>
+
+    <Style TargetType="DataGridRow">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource GoldGlow}"/>
+            </Trigger>
+            <!-- Gold selection, not turquoise. Same reasoning as the progress bar. -->
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource GoldFaint}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="DataGridCell">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8,7"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DataGrid">
+        <Setter Property="Background" Value="{StaticResource BgPanel}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="RowBackground" Value="Transparent"/>
+        <Setter Property="AlternatingRowBackground" Value="#14FFFFFF"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderSubtle}"/>
+        <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+        <Setter Property="RowHeight" Value="30"/>
+        <Setter Property="ColumnHeaderHeight" Value="30"/>
+    </Style>
+
+    <!-- ══ TOOLTIP ════════════════════════════════════════════════════ -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="#F20A0B0D"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderGold}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+</ResourceDictionary>

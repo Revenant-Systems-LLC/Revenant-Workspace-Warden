@@ -96,10 +96,8 @@ namespace RevenantWorkspaceWarden
             }
         }
 
-        public async Task<string?> SendToProviderAsync(string prompt, string? lessonContext = null)
+        public async Task<string?> SendToProviderAsync(string prompt, string? lessonContext = null, CancellationToken ct = default)
         {
-            var ct = CancellationToken.None;
-
             if (_host.IsQuizMode)
             {
                 var haiku = new Providers.AnthropicProvider(_host, overrideModel: "claude-haiku-4-5-20251001");

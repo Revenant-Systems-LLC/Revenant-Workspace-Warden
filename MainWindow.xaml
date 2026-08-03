@@ -119,11 +119,20 @@
             <RowDefinition Height="Auto"/>  <!-- Row 2: status bar -->
         </Grid.RowDefinitions>
 
-        <!-- ── Circuit board background texture (painted first, under everything) -->
+        <!-- ── App background, painted first, under everything ──────────────
+             Was Assets/Circuits.png at 0.28, which never rendered: Circuits.png
+             is declared <None> in the csproj, and a relative Source resolves
+             against embedded resources, so the lookup silently failed. Same
+             class of bug as the fonts. tex-circuit-wide.jpg is registered as a
+             <Resource>, so this one actually paints.
+
+             Gold traces on black marble with turquoise chips — deliberately the
+             gold-leaning texture. Sidekick runs the turquoise-heavy hex tile, so
+             the two read as siblings without being the same skin. -->
         <Image Grid.RowSpan="3"
-               Source="Assets/Circuits.png"
+               Source="Assets/tex-circuit-wide.jpg"
                Stretch="UniformToFill"
-               Opacity="0.28"
+               Opacity="0.6"
                IsHitTestVisible="False"/>
 
         <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -449,6 +458,15 @@
                                    Foreground="{StaticResource Gold}"
                                    FontSize="11" FontStyle="Italic"
                                    VerticalAlignment="Center"/>
+                        <Button Name="StopBtn" Content="◼ STOP"
+                                Height="20" Padding="8,0" Margin="10,0,0,0"
+                                FontSize="10" FontWeight="Bold"
+                                Background="{StaticResource BgPanel}"
+                                Foreground="{StaticResource Gold}"
+                                BorderBrush="{StaticResource Gold}" BorderThickness="1"
+                                VerticalAlignment="Center" Cursor="Hand"
+                                Click="StopGeneration_Click"
+                                ToolTip="Stop the current generation"/>
                     </StackPanel>
 
                     <!-- ── Row 6: Engine Settings Expander ───────────────── -->
