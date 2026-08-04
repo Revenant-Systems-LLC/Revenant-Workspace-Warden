@@ -149,6 +149,7 @@ Reference bandwidths, for re-deriving with whatever you actually have:
 | H100 SXM | ~3.35 TB/s | ~24 tok/s |
 | H200 | ~4.8 TB/s | ~34 tok/s |
 | Consumer RTX 4090 | ~1.0 TB/s | won't fit; 8B FP16 → ~62 tok/s |
+| Consumer RTX 3070 Ti | ~0.61 TB/s | 8 GB VRAM — 8B FP16 won't fit at all; 8B Q4 (~4.7 GB) → ~130 tok/s ceiling |
 | Apple M-series (unified) | ~0.4–0.8 TB/s | why local 70B is slow |
 
 Two sanity checks this gives you for free:
@@ -351,6 +352,10 @@ the table you'll reach for the next time someone asks "why is it slow?"
 
 Compute the theoretical decode floor for your model and hardware using §3.3.
 Look up your GPU's bandwidth (or for Apple Silicon, unified memory bandwidth).
+**Use the quantized size, not the parameter count** — if you pulled a default
+Ollama tag you are almost certainly running Q4, so the numerator is ~4.7 GB for an
+8B model, not 16 GB. Getting this wrong is the single most common way this
+calculation comes out nonsensical.
 Compare to measured `decode_tok_s`.
 
 ```

@@ -323,11 +323,26 @@ budget. Always compute from the actual group size and metadata format.
 Pull the same model at multiple quantizations:
 
 ```powershell
-ollama pull llama3.1:8b-instruct-q8_0
-ollama pull llama3.1:8b-instruct-q4_K_M
-ollama pull llama3.1:8b-instruct-fp16   # if disk allows; ~16 GB
-ollama list                              # note the actual on-disk sizes
+ollama pull llama3.2:3b-instruct-fp16    # ~6.4 GB
+ollama pull llama3.2:3b-instruct-q8_0    # ~3.4 GB
+ollama pull llama3.2:3b-instruct-q4_K_M  # ~2.0 GB
+ollama list                               # note the actual on-disk sizes
 ```
+
+**⚠ Size the base model to your VRAM, or this lab measures the wrong thing.**
+The comparison only works if **every** variant fits in VRAM. The moment one spills
+to system RAM, its decode speed is set by PCIe rather than by HBM, the ratio
+collapses, and you'll conclude quantization is far more effective than it is.
+
+| Your VRAM | Use this base | Because fp16 needs |
+| --- | --- | --- |
+| 8 GB (e.g. RTX 3070 Ti) | **3B** | 6.4 GB — fits; an 8B fp16 at ~16 GB does not |
+| 12–16 GB | 7–8B | ~16 GB — tight at 16, fine above |
+| 24 GB+ | 8B, or 13B | ~26 GB for 13B |
+
+Check with `nvidia-smi` while a model is loaded: if VRAM use plateaus below the
+model size, part of it is on the CPU and this lab is invalid. Verify before you
+trust any number in it.
 
 Reuse `day03_phases.py`. For each variant, fixed 512-token prompt and 256-token
 output, five runs, record median `decode_tok_s` and `prefill_tok_s`.
@@ -343,7 +358,7 @@ Both should hold within tens of percent. Where they don't, work out why (fixed
 per-step overheads dominate at small models; dequantization cost; kernel quality).
 Write the explanation down — this is the moment the theory becomes yours.
 
-Also: divide on-disk size by 8e9 × 1/8 to get actual bits/weight. Is q4_K_M really
+Also: divide on-disk size by (params × 1/8) to get actual bits/weight. Is q4_K_M really
 4 bits? (It isn't. Find the real number.)
 
 ### Part B — Find the damage (45 min)
@@ -354,7 +369,7 @@ Build a five-category mini-eval and run it against fp16 and q4.
 # lab-output/day07_damage.py
 import httpx, json, re
 
-MODELS = ["llama3.1:8b-instruct-fp16", "llama3.1:8b-instruct-q4_K_M"]
+MODELS = ["llama3.2:3b-instruct-fp16", "llama3.2:3b-instruct-q4_K_M"]
 
 def gen(model, prompt, n=300):
     r = httpx.post("http://localhost:11434/api/generate",
