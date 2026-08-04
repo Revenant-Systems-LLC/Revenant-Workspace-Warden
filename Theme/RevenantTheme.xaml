@@ -301,7 +301,28 @@
                             BorderThickness="1"
                             CornerRadius="2"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- ⚠ WITHOUT THIS, A BUTTON'S OWN FONT SETTINGS ARE IGNORED.
+                                 When Content is a plain string, WPF generates a TextBlock
+                                 for it, and the app-level implicit TextBlock style lands on
+                                 that TextBlock — a style setter outranks a value inherited
+                                 from the Button. So FontFamily="Consolas" on a Button did
+                                 nothing and the content silently rendered in Sell Your Soul.
+
+                                 That ate the arrow off "◄ WS" (Sell Your Soul has no ◄) and
+                                 turned "Set Root" into small caps. Styles declared here are
+                                 closer in scope than the app dictionary, so these win. -->
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="FontFamily"
+                                            Value="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                    <Setter Property="FontSize"
+                                            Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                    <Setter Property="FontWeight"
+                                            Value="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -502,6 +523,76 @@
                                 </ScrollViewer>
                             </Border>
                         </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ SLIDER ═════════════════════════════════════════════════════
+         Added for Warden 2026-08-04. There was no Slider style, so TempSlider
+         in Engine Settings fell back to WPF's stock template — light chrome
+         built for a light UI, drawing near-white tick marks across an obsidian
+         panel. That row of vertical bars at the bottom of the window was its
+         eleven ticks (0.0 to 1.0 at 0.1), not a broken control.
+
+         Track is a thin gold rule, thumb is a small gold block. Ticks are
+         suppressed; IsSnapToTickEnabled still works without drawing them. -->
+    <Style TargetType="Thumb" x:Key="SliderThumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="th" Width="10" Height="18" CornerRadius="2"
+                            Background="{StaticResource GoldGradient}"
+                            BorderBrush="{StaticResource GoldBright}"
+                            BorderThickness="1"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="th" Property="Background" Value="{StaticResource GoldBright}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Slider">
+        <Setter Property="Height" Value="22"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid VerticalAlignment="Center">
+                        <Border Height="3" CornerRadius="2"
+                                Background="{StaticResource BgInput}"
+                                BorderBrush="{StaticResource BorderGold}"
+                                BorderThickness="1"
+                                VerticalAlignment="Center"/>
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Height="3" CornerRadius="2" Margin="0,0,0,0"
+                                                    Background="{StaticResource Gold}"
+                                                    VerticalAlignment="Center"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource SliderThumb}"/>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Background="Transparent"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

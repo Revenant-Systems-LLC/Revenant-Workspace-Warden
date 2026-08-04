@@ -44,3 +44,9 @@ Secrets.env
 config.local.*
 user-secrets.json
 user_inputs.json1
+# --- secret + artifact baseline (Nomos Part VI), added 2026-08-04 ---
+**/secrets/**
+**/keys/**
+dist/
+*.pid
+

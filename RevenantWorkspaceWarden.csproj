@@ -46,7 +46,8 @@
     <Resource Include="Assets\Street Reich.otf" />
     <Resource Include="Assets\Sell Your Soul.ttf" />
     <Resource Include="Assets\Ghost theory 1.ttf" />
-    <Resource Include="Assets\tex-circuit-wide.jpg" />
+    <Resource Include="Assets\tex-hexgold.jpg" />
+    <Resource Include="Assets\RWW_Wordmark.jpg" />
     <Resource Include="Assets\RWW_SAGEGOLD.ico" />
     <Resource Include="Assets\RWW_RAGE.ico" />
   </ItemGroup>
