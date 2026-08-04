@@ -42,3 +42,9 @@ Secrets.env
 *.key
 *.pem
 config.local.*
+
+# Course lab scratch (docs/curriculum)
+lab-notebook.md
+docs/curriculum/**/lab-output/
+*.measurements.csv
+.venv-course/
