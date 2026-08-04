@@ -57,8 +57,17 @@ mixed. Take them timed and closed-book.
 | 15 | [`checkpoint-3.md`](checkpoint-3.md) | Days 11–15 — tools, agents, routing, RAG |
 | 21 | [`checkpoint-4.md`](checkpoint-4.md) | Days 16–21 — evals, observability, cost, safety |
 
-Day 22 is the capstone: a failure-mode catalog plus a design exercise that
-touches every prior day.
+Day 22 is the capstone. It opens with a catalog of the twelve ways production
+LLM systems fail, then hands you the build: **assemble the eleven components you
+made across days 2–20 into a working, instrumented tutor running over this
+course as its corpus.** Budget 12–20 hours; it's the largest piece of work here
+and the only one that produces something you keep using.
+
+An optional paper exercise —
+[`capstone-design-exercise.md`](capstone-design-exercise.md) — covers the four
+days a single-user desktop app can't exercise (KV cache under concurrency,
+batching, cost attribution across tenants, multi-tenant isolation). Do it after
+the build, not instead of it.
 
 ---
 
@@ -178,7 +187,7 @@ silently by default.
 
 | Day | Subject | Core question |
 | --- | --- | --- |
-| [22](day-22-production-failure-modes.md) | Production failure modes + capstone | Hallucinated tool calls, malformed JSON, stale retrieval, runaway agents, silent eval regression — recognize, instrument, contain. |
+| [22](day-22-production-failure-modes.md) | Production failure modes + build capstone | The twelve silent failures — recognize, instrument, contain. Then build the thing that survives them. |
 
 **Supporting material:** [`glossary.md`](glossary.md) — every term the course
 uses, defined once, with the day it's introduced.

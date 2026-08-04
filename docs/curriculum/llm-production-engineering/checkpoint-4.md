@@ -286,7 +286,7 @@ from the access logs — if those don't exist either, that is the second finding
 
 | Score | Read this as |
 | --- | --- |
-| 90–100 | You're ready for the capstone. Do it properly — 2 hours, written out. |
+| 90–100 | You're ready for the capstone. It's a build, not an essay — budget a week. |
 | 70–89 | Solid. Note the weak section and re-skim before the capstone. |
 | 60–69 | Redo the weakest day's lab. The capstone touches all six of these days. |
 | < 60 | Redo Days 16, 19, and 20 in full before attempting Day 22. |
