@@ -43,8 +43,8 @@
                     <Run Text=" — fast answer-key responses for timed assessments" Foreground="#888888"/>
                 </TextBlock>
                 <TextBlock Foreground="#cccccc" Margin="0,0,0,4" TextWrapping="Wrap">
-                    <Run Text="  Axiom persona"/>
-                    <Run Text=" — syllabus-aware tutor with customizable materials" Foreground="#888888"/>
+                    <Run Text="  Sidekick security scan"/>
+                    <Run Text=" — letter grade, score, and per-finding Why / Fix for your project" Foreground="#888888"/>
                 </TextBlock>
                 <TextBlock Foreground="#cccccc" TextWrapping="Wrap">
                     <Run Text="  All future Pro features"/>

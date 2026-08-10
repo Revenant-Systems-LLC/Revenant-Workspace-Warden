@@ -297,89 +297,152 @@ namespace RevenantWorkspaceWarden
             LoadCourseData();
 
             await PopulateModelListAsync(config.SelectedModel);
+
+            // First run: walk them to the model settings. This lives here rather
+            // than on the expander's Expanded event, and runs after the model
+            // list is populated so the ModelSelector step isn't pointing at an
+            // empty combo box.
+            if (!config.HasCompletedTutorial)
+                await StartTutorialAsync();
         }
+
+        // ── First-run tutorial ────────────────────────────────────────────────
+        // Rewritten 2026-08-09. Four faults in the original:
+        //   1. It was triggered by EngineSettingsExpander_Expanded, yet every
+        //      step points at a control INSIDE that expander — so it only ran
+        //      for someone who had already found the panel it exists to teach.
+        //      A new user never saw it. That is why it looked "off".
+        //   2. HighlightControl was `async void` with `await Task.Delay(50)`
+        //      guessing at layout, so nothing awaited it and steps could race.
+        //   3. The popup was HorizontalAlignment="Center", parking it mid-window
+        //      instead of beside the thing it was pointing at.
+        //   4. On failure it set the hole to Rect(0,0,0,0) — a full-screen black
+        //      overlay with no cutout, which is the visible symptom Dave hit.
+        // Scope is deliberately the get-a-model-working path and stops at the
+        // API key step; the chat box is self-evident and carries its own hint.
 
         private int _tutorialStep = 0;
 
-        private void EngineSettingsExpander_Expanded(object sender, RoutedEventArgs e)
+        private (FrameworkElement? target, string text, bool needsSettingsOpen) GetTutorialStep(int i) => i switch
         {
-            var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
-            if (!config.HasCompletedTutorial)
+            0 => (EngineSettingsExpander,
+                  "Warden needs a model before it can answer anything. It's all under Engine Settings — press Next and I'll open it for you.", false),
+            1 => (OllamaUrlBox,
+                  "Running a local engine like Ollama? This is its address. The default is right for a standard Ollama install.", true),
+            2 => (ProviderSelector,
+                  "Pick your provider — local Ollama, or a cloud service like Anthropic, OpenAI, Gemini, Groq or xAI.", true),
+            3 => (ModelSelector,
+                  "Then choose a model. This list refreshes to match the provider you picked.", true),
+            4 => (ManageApiKeysBtn,
+                  "Using a cloud provider? Add your API key here. Keys are encrypted with Windows DPAPI and never leave this machine.", true),
+            _ => (null, string.Empty, false)
+        };
+
+        private async Task StartTutorialAsync()
+        {
+            _tutorialStep = 0;
+            SpotlightOverlay.Visibility = Visibility.Visible;
+            await ShowTutorialStepAsync();
+        }
+
+        private async Task ShowTutorialStepAsync()
+        {
+            // Skip a step whose control cannot be resolved rather than blacking
+            // out the window with a zero-size hole.
+            while (true)
             {
-                _tutorialStep = 0;
-                SpotlightOverlay.Visibility = Visibility.Visible;
-                Dispatcher.BeginInvoke(new Action(() => ShowTutorialStep()), System.Windows.Threading.DispatcherPriority.Loaded);
+                var (target, text, needsSettingsOpen) = GetTutorialStep(_tutorialStep);
+                if (target is null) { EndTutorial(); return; }
+
+                if (needsSettingsOpen && !EngineSettingsExpander.IsExpanded)
+                {
+                    EngineSettingsExpander.IsExpanded = true;
+                    await WaitForLayoutAsync();
+                }
+
+                if (await HighlightControlAsync(target, text))
+                    return;
+
+                _tutorialStep++;
             }
         }
 
-        private void ShowTutorialStep()
+        // ContextIdle runs after layout and render have completed. That is what
+        // the old Task.Delay(50) was trying to approximate by feel.
+        private Task WaitForLayoutAsync()
         {
-            switch (_tutorialStep)
-            {
-                case 0:
-                    HighlightControl(OllamaUrlBox);
-                    TutorialText.Text = "This is the Base URL for your local AI engine (like Ollama).";
-                    break;
-                case 1:
-                    HighlightControl(ProviderSelector);
-                    TutorialText.Text = "Select your LLM provider here. You can use local engines or cloud APIs.";
-                    break;
-                case 2:
-                    HighlightControl(ModelSelector);
-                    TutorialText.Text = "Choose the model you want to chat with. The list updates based on your provider.";
-                    break;
-                case 3:
-                    HighlightControl(ManageApiKeysBtn);
-                    TutorialText.Text = "If you use a cloud provider, add your API keys securely in the vault here.";
-                    break;
-                default:
-                    EndTutorial();
-                    break;
-            }
+            UpdateLayout();
+            return Dispatcher.InvokeAsync(() => { },
+                System.Windows.Threading.DispatcherPriority.ContextIdle).Task;
         }
 
-        private async void HighlightControl(FrameworkElement target)
+        private async Task<bool> HighlightControlAsync(FrameworkElement target, string text)
         {
             target.BringIntoView();
-            await Task.Delay(50); // allow layout to settle after scrolling
-            target.UpdateLayout();
+            await WaitForLayoutAsync();
+
+            if (!target.IsVisible || target.ActualWidth <= 0 || target.ActualHeight <= 0)
+                return false;
 
             try
             {
-                GeneralTransform transform = target.TransformToVisual(SpotlightOverlay);
-                Point topLeft = transform.Transform(new Point(0, 0));
-                
-                double padding = 5;
-                SpotlightHole.Rect = new Rect(
-                    topLeft.X - padding,
-                    topLeft.Y - padding,
-                    target.ActualWidth + (padding * 2),
-                    target.ActualHeight + (padding * 2));
+                Point topLeft = target.TransformToVisual(SpotlightOverlay).Transform(new Point(0, 0));
+                const double pad = 5;
+                const double gap = 12;
 
-                TutorialPopup.Margin = new Thickness(0, topLeft.Y + target.ActualHeight + padding + 15, 0, 0);
+                SpotlightHole.Rect = new Rect(
+                    topLeft.X - pad,
+                    topLeft.Y - pad,
+                    target.ActualWidth + (pad * 2),
+                    target.ActualHeight + (pad * 2));
+
+                // Set the text and let the card measure BEFORE positioning it.
+                // ActualHeight is 0 until it has been through a layout pass, and
+                // clamping against a zero height is what pushed the Skip/Next
+                // buttons off the bottom of the window on the first step.
+                TutorialText.Text = text;
+                await WaitForLayoutAsync();
+
+                double cardH = TutorialPopup.ActualHeight;
+                double cardW = TutorialPopup.ActualWidth;
+                if (cardH <= 0) cardH = 150;   // belt and braces if it still hasn't measured
+                if (cardW <= 0) cardW = 300;   // matches MaxWidth in the XAML
+
+                double belowY = topLeft.Y + target.ActualHeight + pad + gap;
+                double aboveY = topLeft.Y - pad - gap - cardH;
+
+                // Prefer below the target; flip above when there isn't room —
+                // the Engine Settings header sits near the bottom of the window,
+                // so "below" runs off the edge for the very first step.
+                double top =
+                    (belowY + cardH + gap <= SpotlightOverlay.ActualHeight) ? belowY
+                    : (aboveY >= gap) ? aboveY
+                    : Math.Max(gap, SpotlightOverlay.ActualHeight - cardH - gap);
+
+                double left = Math.Max(gap,
+                    Math.Min(topLeft.X, Math.Max(gap, SpotlightOverlay.ActualWidth - cardW - gap)));
+
+                TutorialPopup.Margin = new Thickness(left, top, 0, 0);
+                return true;
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
-                // Fallback if not connected to visual tree
-                System.Diagnostics.Debug.WriteLine($"Highlight error: {ex.Message}");
-                SpotlightHole.Rect = new Rect(0, 0, 0, 0);
+                return false; // not in the visual tree — caller moves to the next step
             }
         }
 
-        private void NextTutorial_Click(object sender, RoutedEventArgs e)
+        private async void NextTutorial_Click(object sender, RoutedEventArgs e)
         {
             _tutorialStep++;
-            ShowTutorialStep();
+            await ShowTutorialStepAsync();
         }
 
-        private void SkipTutorial_Click(object sender, RoutedEventArgs e)
-        {
-            EndTutorial();
-        }
+        private void SkipTutorial_Click(object sender, RoutedEventArgs e) => EndTutorial();
 
         private void EndTutorial()
         {
             SpotlightOverlay.Visibility = Visibility.Collapsed;
+            SpotlightHole.Rect = new Rect(0, 0, 0, 0);
             var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
             config.HasCompletedTutorial = true;
             RevenantWorkspaceWarden.Providers.SecretsManager.SaveConfig(config);
@@ -547,13 +610,16 @@ namespace RevenantWorkspaceWarden
         {
             Dispatcher.Invoke(() =>
             {
+                // PNGs, not the .ico. WPF's BitmapImage takes Frames[0] of a
+                // multi-frame icon — the 16x16 — and Windows would upscale that
+                // into alt-tab and the taskbar. The .ico is for the exe only.
                 if (isError)
                 {
-                    this.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/RWW_RAGE.ico"));
+                    this.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/RWW_RAGE.png"));
                 }
                 else
                 {
-                    this.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/RWW_SAGEGOLD.ico"));
+                    this.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/rww_logo.png"));
                 }
             });
         }
@@ -744,17 +810,35 @@ namespace RevenantWorkspaceWarden
             if (Keyboard.Modifiers == ModifierKeys.Shift) return;
 
             e.Handled = true;
+            await SubmitInputAsync();
+        }
 
+        private async void SendBtn_Click(object sender, RoutedEventArgs e) => await SubmitInputAsync();
+
+        // WPF has no placeholder, so the hint is a TextBlock behind the box.
+        private void InputBox_TextChanged(object sender, TextChangedEventArgs e)
+            => InputHint.Visibility = string.IsNullOrEmpty(InputBox.Text)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        // Shared by Enter and the SEND button so both take exactly the same path.
+        private async Task SubmitInputAsync()
+        {
             if (string.IsNullOrWhiteSpace(InputBox.Text)) return;
 
             string text   = InputBox.Text;
             string trimmed = text.Trim();
             string lower  = trimmed.ToLowerInvariant();
             InputBox.Clear();
+            InputBox.Focus();
             AddUserMessage(text);
 
             if      (lower == "/save")                  _chatSessionManager.SaveChatSession();
             else if (lower.StartsWith("/activate"))     await HandleActivateCommandAsync(trimmed.Length > 9 ? trimmed[9..].Trim() : "");
+            // Exact match MUST precede the /tutor prefix check below, or
+            // "/tutorial" matches StartsWith("/tutor") and gets parsed as a
+            // tutor request for the content "ial".
+            else if (lower == "/tutorial")              await StartTutorialAsync();
             else if (lower.StartsWith("/tutor"))        await HandleTutorCommandAsync(trimmed.Length > 6 ? trimmed[6..].Trim() : "");
             else if (lower.StartsWith("/quick"))        await HandleQuickCommandAsync(trimmed.Length > 6 ? trimmed[6..].Trim() : "");
             else if (lower is "/screen" or "/capture" or "/look")
@@ -1132,7 +1216,7 @@ namespace RevenantWorkspaceWarden
             }
         };
 
-        private async void AnalyzeWithAxiom_Click(object sender, RoutedEventArgs e)
+        private async void AnalyzeWithWarden_Click(object sender, RoutedEventArgs e)
         {
             // Prefer loaded-file content; fall back to whatever is in the chalkboard
             string code = _currentFileContent;
@@ -1154,7 +1238,7 @@ namespace RevenantWorkspaceWarden
             string langLabel = string.IsNullOrEmpty(_currentLang) ? "code" : _currentLang;
 
             AddUserMessage($"[Check: {fileLabel}]");
-            AddSystemMessage("Sending to Axiom for review...");
+            AddSystemMessage("Sending to Warden for review...");
 
             string modeHint = IsTutorMode
                 ? "Give a thorough teaching review with before/after code examples and teaching notes."
@@ -1383,7 +1467,7 @@ namespace RevenantWorkspaceWarden
             _saveCourseCacheTimer.Start();
         }
 
-        private async void CourseAxiomNotes_Click(object sender, RoutedEventArgs e)
+        private async void CourseWardenNotes_Click(object sender, RoutedEventArgs e)
         {
             string syllabus   = CourseSyllabusBox.Text.Trim();
             string assignment = CourseAssignmentBox.Text.Trim();
@@ -1394,7 +1478,7 @@ namespace RevenantWorkspaceWarden
                 return;
             }
 
-            AddUserMessage("[Course] Axiom Notes");
+            AddUserMessage("[Course] Warden Notes");
 
             string prompt = "You are a study assistant. Based on the course material below, produce concise, useful notes:\n" +
                             "1. Key topics and concepts by unit/week\n" +

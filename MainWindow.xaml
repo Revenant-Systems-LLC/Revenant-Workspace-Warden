@@ -5,7 +5,7 @@
         MinHeight="700" MinWidth="1100"
         WindowStyle="SingleBorderWindow" Background="{StaticResource BgApp}"
         Topmost="False" ShowInTaskbar="True" WindowStartupLocation="CenterScreen"
-        Icon="Assets/RWW_SAGEGOLD.ico"
+        Icon="Assets/rww_logo.png"
         Loaded="Window_Loaded" Closed="Window_Closed"
         KeyDown="Window_KeyDown"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
@@ -190,7 +190,7 @@
                      and a turquoise shield — the gold-leaning cut of the two, which
                      is why Warden gets this one and not the turquoise-lettered
                      version. Was "REVENANT WORKSPACE WARDEN" set in Ghost Theory. -->
-                <Image Source="Assets/RWW_Wordmark.jpg"
+                <Image Source="Assets/rww.png"
                        Height="52" Stretch="Uniform"
                        HorizontalAlignment="Left"
                        VerticalAlignment="Center"/>
@@ -267,8 +267,9 @@
                         <RowDefinition Height="4"/>                 <!-- Row 3: Resize splitter -->
                         <RowDefinition Height="*" MinHeight="60"/>  <!-- Row 4: Response area -->
                         <RowDefinition Height="Auto"/>              <!-- Row 5: Loading panel -->
-                        <RowDefinition Height="Auto"/>              <!-- Row 6: Engine settings -->
-                        <RowDefinition Height="Auto"/>              <!-- Row 7: Footer -->
+                        <RowDefinition Height="Auto"/>              <!-- Row 6: Chat input -->
+                        <RowDefinition Height="Auto"/>              <!-- Row 7: Engine settings -->
+                        <RowDefinition Height="Auto"/>              <!-- Row 8: Footer -->
                     </Grid.RowDefinitions>
 
                     <!-- ── Row 0: WARDEN header ──────────────────────────── -->
@@ -337,7 +338,7 @@
                                         Background="{StaticResource BgPanel}"
                                         Foreground="{StaticResource Gold}"
                                         BorderBrush="{StaticResource Gold}" BorderThickness="1"
-                                        Click="AnalyzeWithAxiom_Click" Cursor="Hand"/>
+                                        Click="AnalyzeWithWarden_Click" Cursor="Hand"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -457,7 +458,7 @@
                                      Foreground="{StaticResource Gold}"
                                      BorderThickness="0" Margin="0,0,8,0"
                                      VerticalAlignment="Center"/>
-                        <TextBlock Text="Axiom is thinking..."
+                        <TextBlock Text="Warden is thinking..."
                                    Foreground="{StaticResource Gold}"
                                    FontSize="11" FontStyle="Italic"
                                    VerticalAlignment="Center"/>
@@ -472,11 +473,64 @@
                                 ToolTip="Stop the current generation"/>
                     </StackPanel>
 
-                    <!-- ── Row 6: Engine Settings Expander ───────────────── -->
-                    <Expander Name="EngineSettingsExpander" Grid.Row="6"
+                    <!-- ── Row 6: Chat input ──────────────────────────────
+                         Sits directly under the response area, above Engine
+                         Settings, so the conversation reads top-to-bottom:
+                         history -> thinking indicator -> what you type.
+
+                         InputBox_KeyDown already implements the whole input
+                         path (Enter sends, Shift+Enter newlines, /save /activate
+                         /tutor /quick /screen, everything else -> DispatchLlmAsync).
+                         It was Visibility="Collapsed" in the old Row 7 with the
+                         comment "hidden compat elements", which left six features
+                         unreachable. Nothing was wrong with the logic. -->
+                    <Border Grid.Row="6" Background="{StaticResource BgSurface}"
+                            BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,1"
+                            Padding="8,6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- WPF has no placeholder, so the hint is a TextBlock
+                                 behind the box, hidden on first keystroke. -->
+                            <Grid Grid.Column="0">
+                                <TextBox Name="InputBox"
+                                         Background="{StaticResource BgPanel}"
+                                         Foreground="{StaticResource TextPrimary}"
+                                         BorderBrush="{StaticResource BorderColor}" BorderThickness="1"
+                                         CaretBrush="{StaticResource Gold}"
+                                         FontFamily="Consolas" FontSize="12"
+                                         Padding="7,6" MinHeight="34" MaxHeight="120"
+                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         KeyDown="InputBox_KeyDown"
+                                         TextChanged="InputBox_TextChanged"/>
+                                <TextBlock Name="InputHint" IsHitTestVisible="False"
+                                           Text="Ask Warden anything…   Enter to send · Shift+Enter for a new line · /activate, /tutor, /quick, /screen, /save"
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontFamily="Consolas" FontSize="11" FontStyle="Italic"
+                                           Margin="11,0,0,0" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+
+                            <Button Grid.Column="1" Name="SendBtn" Content="SEND ▶"
+                                    Height="34" Padding="12,0" Margin="6,0,0,0"
+                                    VerticalAlignment="Top"
+                                    Background="{StaticResource BgPanel}"
+                                    Foreground="{StaticResource Gold}"
+                                    BorderBrush="{StaticResource Gold}" BorderThickness="1"
+                                    FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                                    Click="SendBtn_Click" Cursor="Hand"
+                                    ToolTip="Send to Warden"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- ── Row 7: Engine Settings Expander ───────────────── -->
+                    <Expander Name="EngineSettingsExpander" Grid.Row="7"
                               Foreground="{StaticResource Gold}"
-                              Background="{StaticResource BgPanel}"
-                              Expanded="EngineSettingsExpander_Expanded">
+                              Background="{StaticResource BgPanel}">
                         <!-- Gear drawn as a Path rather than the ⚙ glyph. Ghost
                              Theory and Consolas both carry ⚙, but a Path cannot
                              be eaten by a font swap later, and this app has now
@@ -658,10 +712,8 @@
                         </ScrollViewer>
                     </Expander>
 
-                    <!-- ── Row 7: Copyright + hidden compat elements ──────── -->
-                    <StackPanel Grid.Row="7">
-                        <TextBox Name="InputBox" Visibility="Collapsed"
-                                 KeyDown="InputBox_KeyDown"/>
+                    <!-- ── Row 8: Copyright ───────────────────────────────── -->
+                    <StackPanel Grid.Row="8">
                         <!-- Street Reich, and bigger. Verified it draws © before
                              using it here — Sell Your Soul renders © as nothing. -->
                         <TextBlock Text="© Revenant Systems LLC"
@@ -791,14 +843,14 @@
                                         BorderBrush="{StaticResource BorderColor}" BorderThickness="1"
                                         FontFamily="Consolas" FontSize="10"
                                         Click="CourseClear_Click" Cursor="Hand"/>
-                                <Button Content="▶ AXIOM NOTES"
+                                <Button Content="▶ WARDEN NOTES"
                                         Height="22" Padding="10,0"
                                         Background="Transparent"
                                         Foreground="{StaticResource Gold}"
                                         BorderBrush="{StaticResource Gold}" BorderThickness="1"
                                         FontFamily="Consolas" FontSize="10" FontWeight="Bold"
-                                        Click="CourseAxiomNotes_Click" Cursor="Hand"
-                                        ToolTip="Send syllabus + assignment to Axiom for study notes"/>
+                                        Click="CourseWardenNotes_Click" Cursor="Hand"
+                                        ToolTip="Send syllabus + assignment to Warden for study notes"/>
                             </DockPanel>
                         </Border>
                     </Grid>
@@ -1022,25 +1074,39 @@
                 </Path.Data>
             </Path>
 
-            <Border Name="TutorialPopup" HorizontalAlignment="Center" VerticalAlignment="Top"
+            <!-- Left-aligned so the code can place it beside whatever is being
+                 highlighted. It used to be Center, which parked it mid-window
+                 regardless of what it was pointing at. -->
+            <Border Name="TutorialPopup" HorizontalAlignment="Left" VerticalAlignment="Top"
                     Margin="0,0,0,0"
                     Background="{StaticResource BgSurface}"
                     BorderBrush="{StaticResource Gold}" BorderThickness="1"
                     CornerRadius="4" Padding="15" MaxWidth="300">
                 <StackPanel>
+                    <!-- Consolas, explicitly. The inherited display face has no
+                         apostrophe or period glyphs, so "It's all under Engine
+                         Settings." rendered as "It s all under Engine Settings"
+                         — same class of silent glyph loss the csproj warns about
+                         with Ghost Theory. Instructional copy needs a text face,
+                         not a display one. -->
                     <TextBlock Name="TutorialText" Text="Tutorial Step"
+                               FontFamily="Consolas" FontSize="12"
                                Foreground="{StaticResource TextPrimary}"
                                TextWrapping="Wrap" Margin="0,0,0,15"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Skip" Width="60" Height="25"
+                        <Button Content="Skip" Width="60" Height="26"
                                 Background="Transparent"
                                 Foreground="{StaticResource TextMuted}"
                                 BorderThickness="0" Margin="0,0,10,0"
+                                FontFamily="Consolas" FontSize="11"
+                                Cursor="Hand"
                                 Click="SkipTutorial_Click"/>
-                        <Button Content="Next" Width="70" Height="25"
+                        <Button Content="Next" Width="70" Height="26"
                                 Background="{StaticResource BgPanel}"
                                 Foreground="{StaticResource Gold}"
-                                BorderBrush="{StaticResource Gold}"
+                                BorderBrush="{StaticResource Gold}" BorderThickness="1"
+                                FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                                Cursor="Hand"
                                 Click="NextTutorial_Click"/>
                     </StackPanel>
                 </StackPanel>

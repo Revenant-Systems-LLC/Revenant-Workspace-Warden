@@ -12,7 +12,7 @@ namespace RevenantWorkspaceWarden.Providers
         /// Sends a chat request to the LLM provider.
         /// Providers should use IWardenHost to stream tokens if possible.
         /// </summary>
-        /// <param name="systemPrompt">The system instruction (e.g. the Axiom teacher persona).</param>
+        /// <param name="systemPrompt">The system instruction (e.g. the Warden tutor persona).</param>
         /// <param name="userPrompt">The user's code/content.</param>
         /// <param name="ct">Cancellation token for aborting the request.</param>
         /// <returns>The fully generated response string, or null if failed.</returns>

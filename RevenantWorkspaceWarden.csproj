@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>Assets\RWW_SAGEGOLD.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\RWW_LOGO.ico</ApplicationIcon>
 
     <!-- Ship metadata -->
     <Version>1.0.0</Version>
@@ -26,7 +26,7 @@
   <ItemGroup>
     <!-- Only the assets the app references at runtime ship loose. BACKGROUND.mp4 and the
          alt marks/fonts (~48 MB) stay in the repo but out of the build output. -->
-    <None Update="Assets\Circuits.png;Assets\RWW_SAGEGOLD.ico;Assets\RWW_RAGE.ico">
+    <None Update="Assets\Circuits.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 
@@ -47,9 +47,35 @@
     <Resource Include="Assets\Sell Your Soul.ttf" />
     <Resource Include="Assets\Ghost theory 1.ttf" />
     <Resource Include="Assets\tex-hexgold.jpg" />
-    <Resource Include="Assets\RWW_Wordmark.jpg" />
-    <Resource Include="Assets\RWW_SAGEGOLD.ico" />
-    <Resource Include="Assets\RWW_RAGE.ico" />
+    <!-- The header wordmark. rww.png, NOT RWW_Wordmark.jpg — same artwork, same
+         1664x624, but the .jpg is Format24bppRgb. JPEG has no alpha channel, so
+         it painted a solid black rectangle behind the mark in the header. The
+         .png is Format32bppArgb and transparent. Swapped 2026-08-09.
+         (Third instance of this same mistake in the project: RWW_SAGEGOLD.ico
+         was also built from a .jpg. If a mark needs transparency, it cannot be
+         a JPEG — the format has no way to store it.) -->
+    <Resource Include="Assets\rww.png" />
+    <!-- App icon, 2026-08-09. Canonical source for both shields is
+         B:\The-Ossuary\Revenant-Systems\Branding-Marketing\revenantsystems-net\assets;
+         these are copies so the build stays self-contained.
+
+         Two formats on purpose:
+           RWW_LOGO.ico  -> <ApplicationIcon> above ONLY. The exe icon. Windows
+                            reads it as an icon group and picks the right frame.
+           *.png         -> the Window's Icon= and SetWardenState's runtime swap.
+
+         ⚠ Do NOT point Window.Icon or SetWardenState at the .ico. WPF's icon
+         loaders (ImageSourceConverter, BitmapFrame.Create, BitmapImage) all take
+         Frames[0] of a multi-frame .ico, which is the 16x16 — Windows then
+         upscales that into alt-tab and the taskbar. Measured 2026-08-09.
+
+         RWW_SAGEGOLD.ico and RWW_RAGE.ico are the retired originals: single
+         256px frame each, and SAGEGOLD had an opaque black background. Moved
+         to Assets\deprecated\ 2026-08-09 — kept, not deleted; see the README
+         there for why. -->
+    <Resource Include="Assets\RWW_LOGO.ico" />
+    <Resource Include="Assets\rww_logo.png" />
+    <Resource Include="Assets\RWW_RAGE.png" />
   </ItemGroup>
 
   <ItemGroup>

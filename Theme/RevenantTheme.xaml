@@ -261,10 +261,22 @@
          nothing at all. Without the setter, text inherits from its container and
          control font sizes work the way you'd expect. -->
     <Style TargetType="TextBlock">
-        <!-- Sell Your Soul stays the default look. Anything that can contain a
-             digit or a punctuation mark sets FontFamily="{StaticResource TextFont}"
-             on itself instead — see the font block at the top of this file. -->
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <!-- ⚠ POLICY INVERTED 2026-08-09, at Dave's call.
+
+             This used to default to UiFont (Sell Your Soul) and expect every
+             string containing a digit or a punctuation mark to opt OUT to
+             TextFont. That is backwards, because the failure is SILENT: the
+             glyph simply is not drawn, nothing errors, and nobody notices.
+             What it actually cost — the Engine Settings temperature readout is
+             a bare number like "0.7" and had been rendering as empty space; six
+             labels had quietly lost their trailing colons; "Context Limit
+             (Tokens):" had lost its parentheses too.
+
+             TextFont (Ghost Theory) draws everything probed — 0-9 . , : / ( ) ' - %
+             — so it is the default now. Sell Your Soul is OPT-IN, via the
+             Eyebrow and SectionLabel styles above, where the string is known to
+             be ALL-CAPS letters only. Reach for it deliberately; never inherit it. -->
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="FontWeight" Value="Bold"/>
     </Style>
@@ -274,9 +286,14 @@
          start dropping out on control labels — "Browse", "Roast", "Student mode"
          lose pieces of letters. SCAN reads fine at the same size only because
          PrimaryButton is bold on a gold fill. PrimaryButton inherits this size. -->
+    <!-- TextFont, not UiFont — same inversion as TextBlock above. Button content
+         is where this bit hardest: the window controls are Buttons whose entire
+         content is a symbol (— ⛶ ✕), and the file already records Sell Your Soul
+         eating the arrow off "◄ WS". A face with no punctuation has no business
+         being the default for control labels. -->
     <Style TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource Gold}"/>
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
         <Setter Property="FontSize" Value="14"/>
         <!-- ⚠ 4,2 here, NOT Sidekick's 14,6. Warden's buttons are small chrome
              buttons with hard-coded Width and Height — the window controls are
@@ -418,9 +435,10 @@
     </Style>
 
     <!-- ══ CHECKBOX ═══════════════════════════════════════════════════ -->
+    <!-- TextFont, same inversion. -->
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource TextCode}"/>
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
@@ -455,9 +473,16 @@
     </Style>
 
     <!-- ══ COMBOBOX ═══════════════════════════════════════════════════ -->
+    <!-- ⚠ TextFont (Ghost Theory), NOT UiFont (Sell Your Soul). A ComboBox shows
+         DATA, and data has digits in it. The model list is the proof: an Ollama
+         tag like "qwen2.5-coder:7b" rendered as "qwencodercb" because Sell Your
+         Soul silently draws nothing for 0-9 . : and -. See the font warning at
+         the top of this file. Changed 2026-08-09 after Dave hit it live.
+         Sidekick's copy of this theme has the same two lines (411 and 433) and
+         has NOT been changed. -->
     <Style x:Key="DarkComboBoxItemStyle" TargetType="ComboBoxItem">
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Padding" Value="8,5"/>
         <Setter Property="Template">
@@ -477,9 +502,13 @@
         </Setter>
     </Style>
 
+    <!-- TextFont here too, for the selected-item text. Both selectors sit one
+         above the other, so they must share a face — Provider in Sell Your Soul
+         and Model in Ghost Theory would read as a mistake even though only the
+         model list actually needs the digits. -->
     <Style TargetType="ComboBox">
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Height" Value="30"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -611,10 +640,12 @@
     </Style>
 
     <!-- ══ DATAGRID ═══════════════════════════════════════════════════ -->
+    <!-- TextFont, same inversion. Column headers can carry punctuation
+         ("File:Line" being the obvious one). -->
     <Style TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="#CC0E1016"/>
         <Setter Property="Foreground" Value="{StaticResource Gold}"/>
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Padding" Value="10,8"/>
