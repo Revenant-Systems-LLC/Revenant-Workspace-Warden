@@ -35,12 +35,12 @@ must be cloned into the same parent folder:
 │   └── RevenantWorkspaceWarden.csproj
 └── revenant-workspace-sidekick\      (sibling — clone next to this repo)
     └── src\
-        ├── RevenantHardening.Core\
-        └── RevenantHardening.Rules\
+        ├── RevenantWorkspaceSidekick.Core\
+        └── RevenantWorkspaceSidekick.Rules\
 ```
 
-The `.csproj` references `..\revenant-workspace-sidekick\src\RevenantHardening.Core` and
-`...\RevenantHardening.Rules`. If the sibling folder is missing, the build fails.
+The `.csproj` references `..\revenant-workspace-sidekick\src\RevenantWorkspaceSidekick.Core` and
+`..\revenant-workspace-sidekick\src\RevenantWorkspaceSidekick.Rules`. If the sibling folder is missing, the build fails.
 
 ## Build & run
 ```powershell
