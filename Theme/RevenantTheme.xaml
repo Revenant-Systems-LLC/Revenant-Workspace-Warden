@@ -216,7 +216,7 @@
     </Style>
 
     <Style x:Key="SubWordmark" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="{StaticResource GhostFont2}"/>
+        <Setter Property="FontFamily" Value="{StaticResource GhostFont}"/>
         <Setter Property="Foreground" Value="{StaticResource Turquoise}"/>
         <Setter Property="FontSize" Value="17"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
