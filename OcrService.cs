@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Tesseract;
@@ -80,7 +81,7 @@ namespace RevenantWorkspaceWarden
                 string extractedText = "";
                 try
                 {
-                    string tessDataPath = EnsureTesseractData(appData);
+                    string tessDataPath = await EnsureTesseractDataAsync(appData);
 
                     if (Directory.Exists(tessDataPath) &&
                         File.Exists(Path.Combine(tessDataPath, "eng.traineddata")))
@@ -171,11 +172,11 @@ namespace RevenantWorkspaceWarden
         // ── Tesseract Data Setup ──────────────────────────────────────────────────
 
         /// <summary>
-        /// Ensures eng.traineddata is in the app's tessdata folder.
-        /// Searches common locations and copies it on first run.
-        /// F:\Downloads is gone — uses portable Environment paths only.
+        /// Ensures eng.traineddata is in the app's tessdata folder. Checks common locations and
+        /// copies it on first run; if it isn't found anywhere, downloads the official English model
+        /// once so OCR is zero-config. Uses portable Environment paths only.
         /// </summary>
-        private string EnsureTesseractData(string appData)
+        private async Task<string> EnsureTesseractDataAsync(string appData)
         {
             string targetTessData = Path.Combine(appData, "RevenantWorkspaceWarden", "tessdata");
             string targetFile     = Path.Combine(targetTessData, "eng.traineddata");
@@ -207,11 +208,47 @@ namespace RevenantWorkspaceWarden
                 }
             }
 
-            // Not found — tell the user exactly where to put it
+            // Nothing found locally — fetch the official English model once so OCR is zero-config.
             Directory.CreateDirectory(targetTessData);
+            if (await TryDownloadTessDataAsync(targetFile))
+                return targetTessData;
+
+            // Download failed (offline, blocked, etc.) — tell the user exactly where to put it.
             _host.AddSystemMessage(
-                $"[Screen] OCR data not found.\n\nDrop eng.traineddata here:\n{targetFile}\n\nThen press F2.");
+                $"[Screen] OCR data not found and auto-download failed.\n\nDrop eng.traineddata here:\n{targetFile}\n\nThen press F2.");
             return targetTessData;
+        }
+
+        /// <summary>
+        /// Downloads the official English LSTM traineddata (tessdata_fast, ~4 MB) into the app's
+        /// tessdata folder. Returns true only if a plausibly-valid file was written.
+        /// </summary>
+        private async Task<bool> TryDownloadTessDataAsync(string targetFile)
+        {
+            const string url = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata";
+            try
+            {
+                _host.AddSystemMessage("[Screen] Downloading OCR language data (~4 MB, one-time)…");
+                using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("RevenantWorkspaceWarden");
+                byte[] data = await client.GetByteArrayAsync(url);
+
+                // eng.traineddata is several MB; anything tiny is an error page, not the model.
+                if (data.Length < 1_000_000)
+                {
+                    _host.AddSystemMessage("[Screen] OCR download looked wrong (too small); skipped.");
+                    return false;
+                }
+
+                await File.WriteAllBytesAsync(targetFile, data);
+                _host.AddSystemMessage("[Screen] OCR language data installed. OCR is ready.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _host.AddSystemMessage($"[Screen] Couldn't auto-download OCR data: {ex.Message}");
+                return false;
+            }
         }
     }
 }

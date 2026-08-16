@@ -4,6 +4,42 @@
              xmlns:local="clr-namespace:RevenantWorkspaceWarden"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Revenant house theme, Warden's variant. Same keys, same
+                     obsidian and gold ramps as Sidekick; turquoise pulled out of
+                     the chrome. Read the header of that file before changing a
+                     color — some values are shared with Sidekick and some are
+                     deliberately not.
+
+                     ══ WHAT THIS REPLACED, 2026-08-03 ═══════════════════════
+                     A local 11-brush palette that lived here. It was navy, not
+                     black, despite the naming:
+
+                         BgApp       #080C12   blue channel 10 over red
+                         BgSurface   #1C2330   blue channel 20 over red
+                         BgStatusBar #1A2D42   blue channel 40 over red
+
+                     Two of its brushes were named for a colour they did not
+                     contain — GoldDim was #2A4A62 and BorderGold was #1A2A3A,
+                     both navy. Every structural line in the app was drawn by a
+                     brush called "BorderGold" that had no gold in it. Its own
+                     section comment said "Gunmetal blue accents," so this was
+                     known at the time and just never revisited.
+
+                     The theme's obsidian is genuinely neutral (#050506 has one
+                     point of blue over red) and BorderGold is #59DFBE81, real
+                     gold at 35 percent.
+
+                     Also dropped, both unreferenced anywhere in the app:
+                       · GoldDim      — the navy above
+                       · GhostFont2   — Ghost Theory 2, retired at Dave's call
+
+                     Every remaining key MainWindow.xaml uses is provided by the
+                     theme. Verified by inventorying all 15 StaticResource
+                     references before the swap; nothing dangles.        -->
+                <ResourceDictionary Source="Theme/RevenantTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -13,13 +13,15 @@ namespace RevenantWorkspaceWarden.Providers
     {
         private readonly IWardenHost _host;
         private readonly string _baseUrl;
-        
+        private readonly string? _overrideModel;
+
         public string Name => "Local Ollama";
 
-        public OllamaProvider(IWardenHost host, string baseUrl = "http://localhost:11434")
+        public OllamaProvider(IWardenHost host, string baseUrl = "http://localhost:11434", string? overrideModel = null)
         {
             _host = host;
             _baseUrl = baseUrl.TrimEnd('/');
+            _overrideModel = overrideModel;
         }
 
         public async Task<List<string>> GetAvailableModelsAsync()
@@ -71,7 +73,7 @@ namespace RevenantWorkspaceWarden.Providers
                 
                 var requestBody = new
                 {
-                    model = _host.SelectedModel,
+                    model = _overrideModel ?? _host.SelectedModel,
                     messages = new[]
                     {
                         new { role = "system", content = systemPrompt },

@@ -34,7 +34,7 @@ namespace RevenantWorkspaceWarden
             if (_host.SelectedProvider == "OpenRouter") return new OpenAICompatibleProvider(_host, "OpenRouter", "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY");
             if (_host.SelectedProvider == "Groq") return new OpenAICompatibleProvider(_host, "Groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY");
             if (_host.SelectedProvider == "xAI") return new OpenAICompatibleProvider(_host, "xAI", "https://api.x.ai/v1", "XAI_API_KEY");
-            if (_host.SelectedProvider == "MegaLLM") return new OpenAICompatibleProvider(_host, "MegaLLM", _host.MegaLlmBaseUrl, "MEGALLM_API_KEY");
+            if (_host.SelectedProvider == "MegaLLM") return new MegaLLMProvider(_host, _host.MegaLlmBaseUrl);
             return new OllamaProvider(_host, _host.OllamaBaseUrl);
         }
 
@@ -82,6 +82,8 @@ namespace RevenantWorkspaceWarden
 
         public async Task LoadModelsAsync(Action<string> addModelCallback)
         {
+            // Note: resilience lives in the provider — OllamaProvider.GetAvailableModelsAsync
+            // already retries 3× with a 2s backoff, which covers a cold `ollama serve` boot.
             var provider = GetCurrentProvider();
             var models = await provider.GetAvailableModelsAsync();
             foreach (var model in models)
@@ -94,9 +96,8 @@ namespace RevenantWorkspaceWarden
             }
         }
 
-        public async Task<string?> SendToProviderAsync(string prompt, string? lessonContext = null)
+        public async Task<string?> SendToProviderAsync(string prompt, string? lessonContext = null, CancellationToken ct = default)
         {
-            var ct = CancellationToken.None;
 
             var provider = GetCurrentProvider();
             string systemPrompt;
@@ -108,7 +109,9 @@ namespace RevenantWorkspaceWarden
             }
             else
             {
-                systemPrompt = "You are a helpful, expert AI coding assistant. Provide concise, accurate answers.";
+                systemPrompt = "You are Warden, the AI coding assistant built into Revenant Workspace Warden. " +
+                               "If asked who or what you are, you are Warden. " +
+                               "Provide concise, accurate answers.";
             }
 
             var text = await provider.ChatAsync(systemPrompt, prompt, ct);
@@ -127,7 +130,13 @@ namespace RevenantWorkspaceWarden
         public string BuildFullTutorPrompt(string? additionalContext = null)
         {
             var sb = new StringBuilder();
-            
+
+            // Identity first, before the user's TutorMaterials files are appended —
+            // otherwise a user editing tutor_profile.md silently removes the name.
+            sb.AppendLine("You are Warden, the AI tutor built into Revenant Workspace Warden.");
+            sb.AppendLine("If asked who or what you are, you are Warden.");
+            sb.AppendLine();
+
             string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string tutorDir = Path.Combine(docPath, "RevenantWarden", "TutorMaterials");
             Directory.CreateDirectory(tutorDir);
