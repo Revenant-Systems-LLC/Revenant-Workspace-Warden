@@ -1,3 +1,7 @@
+> **⚠ SUPERSEDED / STALE (2026-06-30).** This plan targets voice code (`AudioTranscriber.cs`) that
+> was removed during V1 preparation and no longer exists, so it cannot be executed as written. See
+> `README.md` and `walkthrough.md` for the current state. Retained for history only.
+
 # Robustness Improvements for Revenant-Workspace-Warden
 
 This plan outlines the steps to make the Workspace Warden more robust against common failures, edge cases, and runtime exceptions.

@@ -9,20 +9,82 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>Assets\RWW_SAGEGOLD.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\RWW_LOGO.ico</ApplicationIcon>
+
+    <!-- Ship metadata -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>Revenant Workspace Warden</Product>
+    <AssemblyTitle>Revenant Workspace Warden</AssemblyTitle>
+    <Company>Revenant Systems LLC</Company>
+    <Authors>Revenant Systems LLC</Authors>
+    <Copyright>Copyright © 2026 Revenant Systems LLC</Copyright>
+    <Description>Floating AI coding companion for Windows: tutor, quiz, screen OCR, and a built-in security scanner.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="Assets\**">
+    <!-- Only the assets the app references at runtime ship loose. BACKGROUND.mp4 and the
+         alt marks/fonts (~48 MB) stay in the repo but out of the build output. -->
+    <None Update="Assets\Circuits.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+
+    <!-- ⚠ FONTS MUST BE <Resource>, NOT <None>. The theme loads them with
+         pack://application:,,,/Assets/#Family, and the pack scheme reads
+         EMBEDDED resources — it cannot see a loose file sitting next to the exe.
+
+         Ghost Theory was declared <None> with CopyToOutputDirectory until
+         2026-08-03, so all 10 GhostFont usages in MainWindow.xaml had been
+         silently falling back to a default face. Nothing errored; it just was
+         not the font. The reference was wrong twice over — App.xaml also asked
+         for "#Ghost theory 1", which is the FILENAME. The family name inside
+         the file is "Ghost Theory".
+
+         Ghost Theory 2 is no longer referenced at all (retired at Dave's call)
+         so it is deliberately absent from both lists. The file stays in Assets. -->
     <Resource Include="Assets\Street Reich.otf" />
-    <Resource Include="Assets\RWW_SAGEGOLD.ico" />
-    <Resource Include="Assets\RWW_RAGE.ico" />
+    <Resource Include="Assets\Sell Your Soul.ttf" />
+    <Resource Include="Assets\Ghost theory 1.ttf" />
+    <Resource Include="Assets\tex-hexgold.jpg" />
+    <!-- The header wordmark. rww.png, NOT RWW_Wordmark.jpg — same artwork, same
+         1664x624, but the .jpg is Format24bppRgb. JPEG has no alpha channel, so
+         it painted a solid black rectangle behind the mark in the header. The
+         .png is Format32bppArgb and transparent. Swapped 2026-08-09.
+         (Third instance of this same mistake in the project: RWW_SAGEGOLD.ico
+         was also built from a .jpg. If a mark needs transparency, it cannot be
+         a JPEG — the format has no way to store it.) -->
+    <Resource Include="Assets\rww.png" />
+    <!-- App icon, 2026-08-09. Canonical source for both shields is
+         B:\The-Ossuary\Revenant-Systems\Branding-Marketing\revenantsystems-net\assets;
+         these are copies so the build stays self-contained.
+
+         Two formats on purpose:
+           RWW_LOGO.ico  -> <ApplicationIcon> above ONLY. The exe icon. Windows
+                            reads it as an icon group and picks the right frame.
+           *.png         -> the Window's Icon= and SetWardenState's runtime swap.
+
+         ⚠ Do NOT point Window.Icon or SetWardenState at the .ico. WPF's icon
+         loaders (ImageSourceConverter, BitmapFrame.Create, BitmapImage) all take
+         Frames[0] of a multi-frame .ico, which is the 16x16 — Windows then
+         upscales that into alt-tab and the taskbar. Measured 2026-08-09.
+
+         RWW_SAGEGOLD.ico and RWW_RAGE.ico are the retired originals: single
+         256px frame each, and SAGEGOLD had an opaque black background. Moved
+         to Assets\deprecated\ 2026-08-09 — kept, not deleted; see the README
+         there for why. -->
+    <Resource Include="Assets\RWW_LOGO.ico" />
+    <Resource Include="Assets\rww_logo.png" />
+    <Resource Include="Assets\RWW_RAGE.png" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Tesseract" Version="5.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantWorkspaceSidekick.Core\RevenantWorkspaceSidekick.Core.csproj" />
+    <ProjectReference Include="..\revenant-workspace-sidekick\src\RevenantWorkspaceSidekick.Rules\RevenantWorkspaceSidekick.Rules.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,30 @@
+{
+  "scanRoot": "M:\\Projects\\Revenant-Workspace-Warden",
+  "filesScanned": 26,
+  "durationSeconds": 0.3661646,
+  "score": 89,
+  "grade": "B",
+  "findingCount": 2,
+  "findings": [
+    {
+      "ruleId": "RWS-EXEC-002",
+      "title": "UseShellExecute = true detected",
+      "severity": "medium",
+      "file": "UI\\ActivationWindow.xaml.cs",
+      "line": 59,
+      "why": "UseShellExecute = true passes the executable to the Windows shell for launch, enabling shell injection if any argument is derived from user input. AI-generated code commonly sets this without considering the risk.",
+      "fix": "Set UseShellExecute = false and specify the executable path directly. Ensure all arguments are validated or come from trusted sources only.",
+      "redactedSnippet": null
+    },
+    {
+      "ruleId": "RWS-COM-001",
+      "title": "Unresolved developer note",
+      "severity": "low",
+      "file": "MainWindow.xaml.cs",
+      "line": 1069,
+      "why": "TODO, FIXME, and XXX comments indicate incomplete work or technical debt that should be resolved or tracked in an issue tracker.",
+      "fix": "Resolve the issue mentioned in the comment, or convert it to a tracked ticket in your issue tracker.",
+      "redactedSnippet": null
+    }
+  ]
+}
