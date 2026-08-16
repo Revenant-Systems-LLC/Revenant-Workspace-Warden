@@ -73,6 +73,7 @@ namespace RevenantWorkspaceWarden.Providers
             try { if (File.Exists(_keyFilePath)) File.Delete(_keyFilePath); } catch { }
         }
 
+#if DEBUG
         /// <summary>
         /// Dev tool — generate a valid Pro key for distribution.
         /// </summary>
@@ -86,6 +87,7 @@ namespace RevenantWorkspaceWarden.Providers
             var hex = Convert.ToHexString(payload.Concat(sig).ToArray());
             return $"WARD-{hex[..8]}-{hex[8..16]}-{hex[16..24]}";
         }
+#endif
 
         private static void TryLoadSavedKey()
         {
