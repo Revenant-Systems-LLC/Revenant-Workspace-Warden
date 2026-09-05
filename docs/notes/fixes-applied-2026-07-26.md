@@ -1,9 +1,9 @@
 # Fixes applied 2026-07-26 (~03:40)
 
-Scope approved by Dave: the five code fixes from SHIP-PLAN-2026-07-26.md plus secret rotation.
+Scope approved by Dave: the five code fixes from ship-plan-2026-07-26.md plus secret rotation.
 Verified with `dotnet build` in both configurations: **Debug 0/0, Release 0/0.**
 
-## 1. Stop button (SHIP-PLAN step 2, per STOP-BUTTON-PLAN.md)
+## 1. Stop button (SHIP-PLAN step 2, per stop-button-plan.md)
 - `OllamaService.cs` — `SendToProviderAsync` now takes `CancellationToken ct = default`; the dead
   `var ct = CancellationToken.None;` is gone.
 - `MainWindow.xaml.cs` — `_activeGeneration` CTS field; `DispatchLlmAsync` cancels any in-flight
