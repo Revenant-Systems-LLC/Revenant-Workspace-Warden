@@ -11,7 +11,6 @@ namespace RevenantWorkspaceWarden.UI
             InitializeComponent();
             
             if (SecretsManager.HasEncryptedKey("GEMINI_API_KEY")) GeminiKeyBox.Password = "********";
-            if (SecretsManager.HasEncryptedKey("MEGALLM_API_KEY")) MegaLlmKeyBox.Password = "********";
             if (SecretsManager.HasEncryptedKey("ANTHROPIC_API_KEY")) AnthropicKeyBox.Password = "********";
             if (SecretsManager.HasEncryptedKey("OPENAI_API_KEY")) OpenAIKeyBox.Password = "********";
             if (SecretsManager.HasEncryptedKey("OPENROUTER_API_KEY")) OpenRouterKeyBox.Password = "********";
@@ -23,9 +22,6 @@ namespace RevenantWorkspaceWarden.UI
         {
             if (GeminiKeyBox.Password != "********" && !string.IsNullOrWhiteSpace(GeminiKeyBox.Password))
                 SecretsManager.SaveEncryptedKey("GEMINI_API_KEY", GeminiKeyBox.Password);
-
-            if (MegaLlmKeyBox.Password != "********" && !string.IsNullOrWhiteSpace(MegaLlmKeyBox.Password))
-                SecretsManager.SaveEncryptedKey("MEGALLM_API_KEY", MegaLlmKeyBox.Password);
 
             if (AnthropicKeyBox.Password != "********" && !string.IsNullOrWhiteSpace(AnthropicKeyBox.Password))
                 SecretsManager.SaveEncryptedKey("ANTHROPIC_API_KEY", AnthropicKeyBox.Password);

@@ -43,9 +43,8 @@ namespace RevenantWorkspaceWarden
         string SelectedModel { get; }
         double Temperature { get; }
         int ContextSize { get; }
-        string SelectedProvider { get; } // "Ollama", "MegaLLM", or "Gemini"
+        string SelectedProvider { get; } // ProviderSelector item text: "Ollama", "Anthropic", "Gemini", ...
         string OllamaBaseUrl { get; }
-        string MegaLlmBaseUrl { get; }
 
         // ── Application State ────────────────────────────────────────────────────
         bool IsTutorMode { get; set; }
