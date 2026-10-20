@@ -19,7 +19,6 @@ namespace RevenantWorkspaceWarden.Providers
     public class AppConfig
     {
         public string OllamaBaseUrl { get; set; } = "http://localhost:11434";
-        public string MegaLlmBaseUrl { get; set; } = "https://ai.megallm.io";
         public string SelectedProvider { get; set; } = "Ollama";
         public string SelectedModel { get; set; } = "revenant/axiom-14b";
         public bool HasCompletedTutorial { get; set; } = false;

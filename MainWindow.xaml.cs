@@ -76,7 +76,6 @@ namespace RevenantWorkspaceWarden
         }
         public string SelectedProvider => (ProviderSelector.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content.ToString() ?? "Ollama";
         public string OllamaBaseUrl => OllamaUrlBox.Text;
-        public string MegaLlmBaseUrl => MegaLlmUrlBox.Text;
         // =========================================================================
         // Constructor
         // =========================================================================
@@ -266,7 +265,6 @@ namespace RevenantWorkspaceWarden
             var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
             ApplyHotkeyBindings(config);
             OllamaUrlBox.Text = config.OllamaBaseUrl;
-            MegaLlmUrlBox.Text = config.MegaLlmBaseUrl;
             
             foreach (System.Windows.Controls.ComboBoxItem item in ProviderSelector.Items)
             {
@@ -934,7 +932,6 @@ namespace RevenantWorkspaceWarden
             ["Groq"]       = "GROQ_API_KEY",
             ["xAI"]        = "XAI_API_KEY",
             ["Gemini"]     = "GEMINI_API_KEY",
-            ["MegaLLM"]    = "MEGALLM_API_KEY",
         };
 
         private void WarnIfProviderKeyMissing()
@@ -949,13 +946,12 @@ namespace RevenantWorkspaceWarden
 
         private void SaveCurrentConfig()
         {
-            if (OllamaUrlBox == null || MegaLlmUrlBox == null || ModelSelector == null) return; // Not fully initialized yet
+            if (OllamaUrlBox == null || ModelSelector == null) return; // Not fully initialized yet
 
             // Load existing config first so fields we don't set here
             // (HasCompletedTutorial, API keys, etc.) survive the save.
             var config = RevenantWorkspaceWarden.Providers.SecretsManager.LoadConfig();
             config.OllamaBaseUrl = OllamaUrlBox.Text;
-            config.MegaLlmBaseUrl = MegaLlmUrlBox.Text;
             config.SelectedProvider = SelectedProvider;
             config.SelectedModel = ModelSelector.SelectedItem?.ToString() ?? "";
             RevenantWorkspaceWarden.Providers.SecretsManager.SaveConfig(config);

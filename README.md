@@ -15,8 +15,8 @@ Part of the Revenant Systems toolset.
 - **Screen capture + OCR** — grab the active window and pull its text via Tesseract.
 - **Clipboard review** — send whatever you just copied straight to the model.
 - **File attach** — drop a source file in for review (5 MB guard).
-- **8 model backends** — local **Ollama** plus Anthropic, Gemini, OpenAI, OpenRouter, Groq, xAI,
-  and MegaLLM. API keys are stored encrypted (Windows DPAPI), never in the repo.
+- **7 model backends** — local **Ollama** plus Anthropic, Gemini, OpenAI, OpenRouter, Groq, and
+  xAI. API keys are stored encrypted (Windows DPAPI), never in the repo.
 
 ## Requirements
 - **Windows 10/11** (WPF, DPAPI, per-user data paths).

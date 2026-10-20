@@ -11,7 +11,7 @@ using RevenantWorkspaceWarden.Providers;
 namespace RevenantWorkspaceWarden
 {
     /// <summary>
-    /// Handles all LLM communication (Ollama, MegaLLM, Gemini) using the ILLMProvider abstraction.
+    /// Handles all LLM communication (Ollama and the cloud providers) using the ILLMProvider abstraction.
     /// Also owns the tutor prompt builder and response enrichment logic.
     /// </summary>
     internal sealed class OllamaService : IDisposable
@@ -34,7 +34,6 @@ namespace RevenantWorkspaceWarden
             if (_host.SelectedProvider == "OpenRouter") return new OpenAICompatibleProvider(_host, "OpenRouter", "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY");
             if (_host.SelectedProvider == "Groq") return new OpenAICompatibleProvider(_host, "Groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY");
             if (_host.SelectedProvider == "xAI") return new OpenAICompatibleProvider(_host, "xAI", "https://api.x.ai/v1", "XAI_API_KEY");
-            if (_host.SelectedProvider == "MegaLLM") return new MegaLLMProvider(_host, _host.MegaLlmBaseUrl);
             return new OllamaProvider(_host, _host.OllamaBaseUrl);
         }
 

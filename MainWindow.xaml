@@ -565,12 +565,6 @@
                                          BorderBrush="{StaticResource BorderColor}" Padding="2" Margin="0,0,0,10"
                                          LostFocus="SettingsBox_LostFocus"/>
 
-                                <TextBlock Text="MegaLLM Base URL:" Foreground="{StaticResource TextMuted}" Margin="0,0,0,2"/>
-                                <TextBox Name="MegaLlmUrlBox" Text="https://ai.megallm.io"
-                                         Background="{StaticResource BgPanel}" Foreground="{StaticResource TextPrimary}"
-                                         BorderBrush="{StaticResource BorderColor}" Padding="2" Margin="0,0,0,10"
-                                         LostFocus="SettingsBox_LostFocus"/>
-
                                 <Button Name="ManageApiKeysBtn" Content="Manage API Keys"
                                         Background="{StaticResource BgPanel}"
                                         Foreground="#DFBE81"
@@ -591,7 +585,6 @@
                                     <ComboBoxItem Content="Groq"/>
                                     <ComboBoxItem Content="xAI"/>
                                     <ComboBoxItem Content="Gemini"/>
-                                    <ComboBoxItem Content="MegaLLM"/>
                                 </ComboBox>
 
                                 <TextBlock Text="Selected Model:" Foreground="{StaticResource TextMuted}" Margin="0,0,0,2"/>
