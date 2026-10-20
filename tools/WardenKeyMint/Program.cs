@@ -1,7 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using RevenantWorkspaceWarden.Providers;
 
 namespace WardenKeyMint
@@ -45,11 +48,13 @@ namespace WardenKeyMint
             }
 
             using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var pem = key.ExportPkcs8PrivateKeyPem();   // before the file exists, so a failure leaves nothing behind
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
             var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };   // never overwrite a key
             if (!OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             using (var file = new StreamWriter(fullPath, options))
-                file.Write(key.ExportPkcs8PrivateKeyPem());
+                file.Write(pem);
+            if (OperatingSystem.IsWindows()) RestrictToCurrentUser(fullPath);
 
             var nextId = (byte)(LicenseKey.PublicKeys.Keys.DefaultIfEmpty((byte)0).Max() + 1);
             Console.WriteLine($"Private key written to {fullPath}. Back it up offline; it never goes in a repo.");
@@ -106,6 +111,26 @@ namespace WardenKeyMint
                 throw new CryptographicException("The signing key must be ECDSA P-256.");
             }
             return key;
+        }
+
+        // Windows has no 0600. A new file inherits its folder's ACL, which on a non-system drive
+        // usually lets every local user read it, so replace that with one rule for this user.
+        [SupportedOSPlatform("windows")]
+        private static void RestrictToCurrentUser(string path)
+        {
+            using var user = WindowsIdentity.GetCurrent();
+            try
+            {
+                var security = new FileSecurity();
+                security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+                security.AddAccessRule(new FileSystemAccessRule(user.User!, FileSystemRights.FullControl, AccessControlType.Allow));
+                new FileInfo(path).SetAccessControl(security);
+            }
+            catch (Exception ex)   // the key exists either way, so say how to finish by hand
+            {
+                Console.Error.WriteLine($"warning: could not limit {path} to {user.Name}: {ex.Message}");
+                Console.Error.WriteLine($"         run: icacls \"{path}\" /inheritance:r /grant:r \"{user.Name}:F\"");
+            }
         }
 
         private static string Serial(string licenseKey) =>

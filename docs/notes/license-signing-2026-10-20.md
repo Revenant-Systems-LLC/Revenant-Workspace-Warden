@@ -63,8 +63,9 @@ groups of 8: `WARD-XXXXXXXX-…-XXXXXXXX`, 139 characters. Old keys were 31.
 - `LicenseManager` keeps its public surface (`IsActivated`, `ValidateAndActivate`, `Deactivate`)
   and its `license.dat` storage. `_secret`, the HMAC check and `GenerateProKey()` are deleted.
 - New `tools/WardenKeyMint` (console app, net10.0, never shipped):
-  - `keygen <out.pem>` writes a PKCS#8 private key. It refuses to overwrite a file or to write
-    inside a git work tree, and prints the public key line for `LicenseKey.cs`.
+  - `keygen <out.pem>` writes a PKCS#8 private key that only the current user can read (0600 on
+    Unix, a one-rule ACL on Windows). It refuses to overwrite a file or to write inside a git work
+    tree, and prints the public key line for `LicenseKey.cs`.
   - `mint <key.pem> [count]` refuses a private key whose public half is not in the client's table,
     and checks every key it prints with the client's own verifier.
   - `verify <key>` is for support.
@@ -151,8 +152,15 @@ must be gone and `HMACSHA256` must be absent. The secret check is an exact byte 
   has no `HMACSHA256`, `GenerateProKey`, `SignData` or minting code. The same scan on `main`
   finds the secret.
 - `WardenKeyMint`: `keygen` refuses an existing file and a path in a git work tree, and writes the
-  PEM as 0600 on Unix. `mint` refuses a key the client doesn't know. A key it mints passes
-  `verify`, and coreutils `base32 -d` decodes it to `02 01 01` plus the serial.
+  PEM as 0600 on Unix. On Windows it replaces the inherited ACL with one rule for the current user;
+  that path compiles but has not run, so check it with `icacls` after the first `keygen`. `mint`
+  refuses a key the client doesn't know. A key it mints passes `verify`, and coreutils
+  `base32 -d` decodes it to `02 01 01` plus the serial.
+- The Step 10 PHP block was first written without a lock across its read and write. Under 80
+  concurrent requests it minted 30 different keys for one session and lost 38 of 41 log entries.
+  With one exclusive lock it mints one key per session and keeps every entry, over three such runs.
+  It fails closed on a missing PEM, an RSA or P-384 key, a corrupt log (left untouched) and an
+  unwritable log.
 
 ## What this does not solve
 

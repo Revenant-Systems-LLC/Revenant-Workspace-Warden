@@ -62,7 +62,7 @@ namespace RevenantWorkspaceWarden.Tests
             var publicKeys = new Dictionary<byte, string> { [0x02] = PhpPublicKey };
 
             Assert.True(LicenseKey.IsValidPro(PhpMintedKey, publicKeys));
-            Assert.False(LicenseKey.IsValidPro(PhpMintedKey, _publicKeys));
+            Assert.False(LicenseKey.IsValidPro(PhpMintedKey, new Dictionary<byte, string> { [0x02] = Spki(_signingKey) }));   // same id, other key
         }
 
         // ── Tampered ─────────────────────────────────────────────────────────────
