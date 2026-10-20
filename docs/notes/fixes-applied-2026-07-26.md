@@ -21,6 +21,11 @@ Verified with `dotnet build` in both configurations: **Debug 0/0, Release 0/0.**
   mid-stream, confirm clean halt + Sage Gold + next prompt works.
 
 ## 2. Licence hygiene (step 3) + secret rotation (step 1)
+
+> **Superseded 2026-10-20; see `license-signing-2026-10-20.md`.** `_secret`, the HMAC check and
+> `GenerateProKey()` are gone. Keys are ECDSA-signed, the PHP endpoint signs with its own private
+> key, and no secret bytes exist to copy. The last bullet below no longer applies.
+
 - `LicenseManager.cs` — `_secret` rotated to new random 32 bytes (old value had been through
   agent context windows; zero keys ever issued, so nothing broke). **Any dev key minted under
   the old secret no longer validates** — mint a fresh one from a Debug build.

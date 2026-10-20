@@ -11,6 +11,10 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\RWW_LOGO.ico</ApplicationIcon>
 
+    <!-- tests\ and tools\ hold their own projects (license tests, the key minting tool).
+         Without this the SDK's **\*.cs glob compiles them into the app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests\**;tools\**</DefaultItemExcludes>
+
     <!-- Ship metadata -->
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
