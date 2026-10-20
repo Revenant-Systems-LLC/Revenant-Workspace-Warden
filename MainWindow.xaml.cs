@@ -829,7 +829,10 @@ namespace RevenantWorkspaceWarden
             string lower  = trimmed.ToLowerInvariant();
             InputBox.Clear();
             InputBox.Focus();
-            AddUserMessage(text);
+            // Never echo a license key into the chat: the transcript stays on
+            // screen and /save writes every message to Documents.
+            bool hidesKey = lower.StartsWith("/activate") && trimmed.Length > 9;
+            AddUserMessage(hidesKey ? "/activate ********" : text);
 
             if      (lower == "/save")                  _chatSessionManager.SaveChatSession();
             else if (lower.StartsWith("/activate"))     await HandleActivateCommandAsync(trimmed.Length > 9 ? trimmed[9..].Trim() : "");
