@@ -93,7 +93,8 @@ Tutor, Quiz, and the Sidekick scanner are Pro features. Activate with:
 /activate <your-license-key>
 ```
 
-Licenses validate locally (HMAC) and are stored encrypted on this machine.
+Licenses are signed keys, checked offline against a public key built into Warden, and stored
+encrypted on this machine.
 
 ---
 *Revenant Systems LLC.*
