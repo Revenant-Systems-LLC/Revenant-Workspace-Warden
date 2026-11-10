@@ -53,7 +53,13 @@
                                        character-level legibility is the job -->
     <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/#Street Reich</FontFamily>
     <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/#Sell Your Soul</FontFamily>
-    <FontFamily x:Key="BodyAltFont">pack://application:,,,/Assets/#Ghost Theory</FontFamily>
+    <!-- 2026-11-09: BodyAltFont and TextFont moved off Ghost Theory to Bahnschrift.
+         Ghost Theory's lowercase "o" renders as an "e" at UI sizes: "Course Mode"
+         drew as "Ceurse Mede", "discord" as "discerd". Checked by rendering both faces
+         in WPF at 11, 13 and 14 px. Bahnschrift ships with Windows 10 and 11, so
+         nothing is bundled and there is no font license to clear. Ghost Theory
+         (GhostFont) stays for ALL-CAPS labels and the grade letter, where it reads fine. -->
+    <FontFamily x:Key="BodyAltFont">Bahnschrift, Segoe UI</FontFamily>
     <FontFamily x:Key="CodeFont">Consolas</FontFamily>
 
     <!-- ⚠⚠ SELL YOUR SOUL HAS NO NUMBERS AND NO PUNCTUATION. Confirmed by Dave,
@@ -82,7 +88,7 @@
              Street Reich      draws none of: ( ) ' - %   (digits and . , : / ok)
 
          Street Reich is only on REVENANT SYSTEMS LLC, which is letters. Fine. -->
-    <FontFamily x:Key="TextFont">pack://application:,,,/Assets/#Ghost Theory</FontFamily>
+    <FontFamily x:Key="TextFont">Bahnschrift, Segoe UI</FontFamily>
 
     <!-- Back-compat alias so nothing breaks if an old key is still referenced. -->
     <FontFamily x:Key="UiFont">pack://application:,,,/Assets/#Sell Your Soul</FontFamily>
